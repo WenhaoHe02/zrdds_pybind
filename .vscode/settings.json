@@ -1,0 +1,18 @@
+{
+  "python.defaultInterpreterPath": "D:/ANACONDA/python.exe",
+  "files.encoding": "utf8",
+  "C_Cpp.default.includePath": [
+    "D:/pybind11/include",
+    "D:/ANACONDA/include",
+    "D:/ZRDDS/ZRDDS-2.4.4/include/ZRDDSCoreInterface",
+    "D:/ZRDDS/ZRDDS-2.4.4/include/CPlusPlusInterface",
+    "${workspaceFolder}/src"
+  ],
+  "C_Cpp.default.defines": ["_ZRXMLENTITYINTERFACE"],
+  "C_Cpp.default.cppStandard": "c++17",
+  "C_Cpp.default.cStandard": "c17",
+  "C_Cpp.errorSquiggles": "Enabled",
+  "python-envs.defaultEnvManager": "ms-python.python:conda",
+  "python-envs.defaultPackageManager": "ms-python.python:conda",
+  "python-envs.pythonProjects": []
+}

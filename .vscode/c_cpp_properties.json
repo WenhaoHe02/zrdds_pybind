@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "D:/pybind11/include",
+                "D:/ANACONDA/include",
+                "D:/ZRDDS/ZRDDS-2.4.4/include/ZRDDSCoreInterface",
+                "D:/ZRDDS/ZRDDS-2.4.4/include/CPlusPlusInterface"
+            ],
+            "defines": [
+                "_ZRXMLENTITYINTERFACE"
+            ],
+            "windowsSdkVersion": "10.0.18362.0",
+            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64/cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "msvc-x64"
+        }
+    ],
+    "version": 4
+}
