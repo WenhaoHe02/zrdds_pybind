@@ -70,8 +70,9 @@ PYBIND11_MODULE(Project1, m)
     // 替换原来的常量绑定代码
     // 直接导出 sentinel，不做 py::cast
 
+    m.attr("DOMAINPARTICIPANT_QOS_DEFAULT") = py::int_(-1);
     m.attr("DOMAINPARTICIPANT_FACTORY_QOS_DEFAULT") = DDS::DOMAINPARTICIPANT_FACTORY_QOS_DEFAULT;
-    m.attr("DOMAINPARTICIPANT_QOS_DEFAULT") = DDS::DOMAINPARTICIPANT_QOS_DEFAULT;
+    // m.attr("DOMAINPARTICIPANT_QOS_DEFAULT") = DDS::DOMAINPARTICIPANT_QOS_DEFAULT;
     m.attr("PUBLISHER_QOS_DEFAULT") = DDS::PUBLISHER_QOS_DEFAULT;
     m.attr("SUBSCRIBER_QOS_DEFAULT") = DDS::SUBSCRIBER_QOS_DEFAULT;
     m.attr("DATAWRITER_QOS_DEFAULT") = DDS::DATAWRITER_QOS_DEFAULT;
@@ -176,7 +177,7 @@ PYBIND11_MODULE(Project1, m)
                 int mask)
              {
                  // 如果 Python 传的是 sentinel，就走这里
-                 if (qos_obj.is(DDS::DOMAINPARTICIPANT_QOS_DEFAULT;))
+                 if (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1)
                  {
                      return factory->create_participant(domain_id,
                                                         DDS::DOMAINPARTICIPANT_QOS_DEFAULT,
@@ -186,10 +187,10 @@ PYBIND11_MODULE(Project1, m)
                  // 否则，把它当作一个真实的 QoS 对象
                  DDS::DomainParticipantQos qos = qos_obj.cast<DDS::DomainParticipantQos>();
                  return factory->create_participant(domain_id, qos, listener, mask);
-             });
+             })
 
-    .def("get_default_participant_qos", [](DDS::DomainParticipantFactory &self, DDS::DomainParticipantQos &qoslist)
-         { return self.get_default_participant_qos(qoslist); }, "获取该工厂为域参与者保存的默认QoS配置", py::arg("qoslist"))
+        .def("get_default_participant_qos", [](DDS::DomainParticipantFactory &self, DDS::DomainParticipantQos &qoslist)
+             { return self.get_default_participant_qos(qoslist); }, "获取该工厂为域参与者保存的默认QoS配置", py::arg("qoslist"))
         .def("get_qos", [](DDS::DomainParticipantFactory &self, DDS_DomainParticipantFactoryQos &qoslist)
              { return self.get_qos(qoslist); }, "获取DomainParticipantFactory的QoS设置", py::arg("qoslist"));
 }
