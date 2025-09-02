@@ -1,8 +1,10 @@
 # 忽略所有文件和文件夹
 *
-# 但是不忽略 build 和 test 文件夹
-!build/
-!test/
-!ListenersTest
-# 也要确保 .gitignore 文件本身不被忽略
+# 但是不忽略特定的文件和文件夹
 !.gitignore
+!build/
+!build/**
+!test/
+!test/**
+!ListenersTest
+!datastruct_cpp
