@@ -12,10 +12,8 @@ namespace py = pybind11;
 
 // 自定义删除器，用于安全地管理DDS对象的生命周期
 // 注意：对于DDS对象，我们不直接delete，而是依赖DDS运行时管理
-struct TrainCmdDataReaderDeleter
-{
-    void operator()(ai_train::TrainCmdDataReader *ptr) const
-    {
+struct TrainCmdDataReaderDeleter {
+    void operator()(ai_train::TrainCmdDataReader* ptr) const {
         // 对于DDS对象，析构函数是protected的，不能直接delete
         // 我们也不调用特定的释放函数，因为这些对象的生命周期由DDS运行时管理
         // 这里保持为空，实际的对象清理由DDS运行时负责
@@ -23,38 +21,28 @@ struct TrainCmdDataReaderDeleter
     }
 };
 
-struct ClientUpdateDataReaderDeleter
-{
-    void operator()(ai_train::ClientUpdateDataReader *ptr) const
-    {
+struct ClientUpdateDataReaderDeleter {
+    void operator()(ai_train::ClientUpdateDataReader* ptr) const {
     }
 };
 
-struct ModelBlobDataReaderDeleter
-{
-    void operator()(ai_train::ModelBlobDataReader *ptr) const
-    {
+struct ModelBlobDataReaderDeleter {
+    void operator()(ai_train::ModelBlobDataReader* ptr) const {
     }
 };
 
-struct TrainCmdDataWriterDeleter
-{
-    void operator()(ai_train::TrainCmdDataWriter *ptr) const
-    {
+struct TrainCmdDataWriterDeleter {
+    void operator()(ai_train::TrainCmdDataWriter* ptr) const {
     }
 };
 
-struct ClientUpdateDataWriterDeleter
-{
-    void operator()(ai_train::ClientUpdateDataWriter *ptr) const
-    {
+struct ClientUpdateDataWriterDeleter {
+    void operator()(ai_train::ClientUpdateDataWriter* ptr) const {
     }
 };
 
-struct ModelBlobDataWriterDeleter
-{
-    void operator()(ai_train::ModelBlobDataWriter *ptr) const
-    {
+struct ModelBlobDataWriterDeleter {
+    void operator()(ai_train::ModelBlobDataWriter* ptr) const {
     }
 };
 
@@ -190,30 +178,67 @@ void bind_sequence_mapped(py::module_ &m, const char *name)
 // DataWriter 绑定模板
 // ================================
 template <typename DDSWriterType, typename MsgType, typename MsgWrapper, typename Deleter>
-void bind_datawriter(py::module_ &m, const char *py_class_name)
-{
+void bind_datawriter(py::module_ &m, const char *py_class_name) {
     py::class_<DDSWriterType, std::unique_ptr<DDSWriterType, Deleter>>(m, py_class_name)
-        .def("write", [](DDSWriterType &writer, const MsgWrapper &msg_wrapper)
-             {
+        .def("write", [](DDSWriterType &writer, const MsgWrapper &msg_wrapper) {
             const MsgType &msg = static_cast<const MsgType &>(msg_wrapper);
-            return writer.write(msg, DDS::HANDLE_NIL_NATIVE); });
+            return writer.write(msg, DDS::HANDLE_NIL_NATIVE);
+        });
 }
 
 // DataReader 绑定模板（去掉DDS::DataReader基类）
 template <typename DDSReaderType, typename MsgType, typename SeqType, typename MsgWrapper, typename Deleter>
-void bind_datareader(py::module_ &m, const char *py_class_name)
-{
+void bind_datareader(py::module_& m, const char* py_class_name) {
     py::class_<DDSReaderType, std::unique_ptr<DDSReaderType, Deleter>>(m, py_class_name)
-        .def("take", [](DDSReaderType &reader, SeqType &dataSeq, DDS::SampleInfoSeq &infoSeq, py::object max_samples, py::object sampleState, py::object viewState, py::object instanceState)
-             {
+        .def("read", [](DDSReaderType& reader,
+            SeqType& dataSeq,
+            DDS::SampleInfoSeq& infoSeq,
+            py::object max_samples,
+            py::object sampleState,
+            py::object viewState,
+            py::object instanceState) {
                 // 处理Python中定义的DDS常量和默认值
                 DDS::Long max_samples_val = py::cast<DDS::Long>(max_samples);
                 DDS::SampleStateMask sample_state = static_cast<DDS::SampleStateMask>(py::cast<DDS::ULong>(sampleState));
                 DDS::ViewStateMask view_state = static_cast<DDS::ViewStateMask>(py::cast<DDS::ULong>(viewState));
                 DDS::InstanceStateMask instance_state = static_cast<DDS::InstanceStateMask>(py::cast<DDS::ULong>(instanceState));
-                return reader.take(dataSeq, infoSeq, max_samples_val, sample_state, view_state, instance_state); }, py::arg("dataSeq"), py::arg("infoSeq"), py::arg("max_samples") = LENGTH_UNLIMITED, py::arg("sampleState") = DDS::ANY_SAMPLE_STATE, py::arg("viewState") = DDS::ANY_VIEW_STATE, py::arg("instanceState") = DDS::ANY_INSTANCE_STATE)
-        .def("create_readcondition", [](DDSReaderType &self, py::object sample_mask, py::object view_mask, py::object instance_mask) -> std::shared_ptr<DDS::ReadCondition>
-             {
+                return reader.read(dataSeq, infoSeq, max_samples_val, sample_state, view_state, instance_state);
+            },
+            py::arg("dataSeq"),
+            py::arg("infoSeq"),
+            py::arg("max_samples") = LENGTH_UNLIMITED,
+            py::arg("sampleState") = DDS::ANY_SAMPLE_STATE,
+            py::arg("viewState") = DDS::ANY_VIEW_STATE,
+            py::arg("instanceState") = DDS::ANY_INSTANCE_STATE
+        )
+        .def("take", [](DDSReaderType& reader,
+            SeqType& dataSeq,
+            DDS::SampleInfoSeq& infoSeq,
+            py::object max_samples,
+            py::object sampleState,
+            py::object viewState,
+            py::object instanceState) {
+                // 处理Python中定义的DDS常量和默认值
+                DDS::Long max_samples_val = py::cast<DDS::Long>(max_samples);
+                DDS::SampleStateMask sample_state = static_cast<DDS::SampleStateMask>(py::cast<DDS::ULong>(sampleState));
+                DDS::ViewStateMask view_state = static_cast<DDS::ViewStateMask>(py::cast<DDS::ULong>(viewState));
+                DDS::InstanceStateMask instance_state = static_cast<DDS::InstanceStateMask>(py::cast<DDS::ULong>(instanceState));
+                return reader.take(dataSeq, infoSeq, max_samples_val, sample_state, view_state, instance_state);
+            },
+            py::arg("dataSeq"),
+            py::arg("infoSeq"),
+            py::arg("max_samples") = LENGTH_UNLIMITED,
+            py::arg("sampleState") = DDS::ANY_SAMPLE_STATE,
+            py::arg("viewState") = DDS::ANY_VIEW_STATE,
+            py::arg("instanceState") = DDS::ANY_INSTANCE_STATE
+        )
+        .def("create_readcondition",
+            [](DDSReaderType& self,
+                py::object sample_mask,
+                py::object view_mask,
+                py::object instance_mask)
+            -> std::shared_ptr<DDS::ReadCondition>
+            {
                 DDS::ReadCondition* rc = self.create_readcondition(
                     static_cast<DDS::SampleStateMask>(py::cast<DDS::ULong>(sample_mask)),
                     static_cast<DDS::ViewStateMask>(py::cast<DDS::ULong>(view_mask)),
@@ -227,32 +252,40 @@ void bind_datareader(py::module_ &m, const char *py_class_name)
                 // 推荐用 return_value_policy::reference 或者 aliasing 技巧
                 return std::shared_ptr<DDS::ReadCondition>(rc, [](DDS::ReadCondition*) {
                     // 空 deleter，让 DDS 自己管理生命周期
-                    }); }, py::arg("sample_mask"), py::arg("view_mask"), py::arg("instance_mask"),
-             py::return_value_policy::reference // 确保 Python 端不去释放它
-        );
+                    });
+            },
+            py::arg("sample_mask"),
+            py::arg("view_mask"),
+            py::arg("instance_mask"),
+            py::return_value_policy::reference  // 确保 Python 端不去释放它
+        )
+        .def("return_loan", [](DDSReaderType& reader,
+            SeqType& dataSeq,
+            DDS::SampleInfoSeq& infoSeq) {
+                return reader.return_loan(dataSeq, infoSeq);
+            });
+
 }
+
 
 // ================================
 // narrow 工厂函数（DataWriter）
 // ================================
 static std::unique_ptr<ai_train::TrainCmdDataWriter, TrainCmdDataWriterDeleter>
-as_train_cmd_datawriter(DDS::DataWriter *writer)
-{
-    ai_train::TrainCmdDataWriter *data_writer = ai_train::TrainCmdDataWriter::createI(writer, ai_train::TrainCmdTypeSupport::get_instance);
+as_train_cmd_datawriter(DDS::DataWriter* writer) {
+    ai_train::TrainCmdDataWriter* data_writer = ai_train::TrainCmdDataWriter::createI(writer, ai_train::TrainCmdTypeSupport::get_instance);
     return std::unique_ptr<ai_train::TrainCmdDataWriter, TrainCmdDataWriterDeleter>(data_writer);
 }
 
 static std::unique_ptr<ai_train::ClientUpdateDataWriter, ClientUpdateDataWriterDeleter>
-as_client_update_datawriter(DDS::DataWriter *writer)
-{
-    ai_train::ClientUpdateDataWriter *data_writer = ai_train::ClientUpdateDataWriter::createI(writer, ai_train::ClientUpdateTypeSupport::get_instance);
+as_client_update_datawriter(DDS::DataWriter* writer) {
+    ai_train::ClientUpdateDataWriter* data_writer = ai_train::ClientUpdateDataWriter::createI(writer, ai_train::ClientUpdateTypeSupport::get_instance);
     return std::unique_ptr<ai_train::ClientUpdateDataWriter, ClientUpdateDataWriterDeleter>(data_writer);
 }
 
 static std::unique_ptr<ai_train::ModelBlobDataWriter, ModelBlobDataWriterDeleter>
-as_model_blob_datawriter(DDS::DataWriter *writer)
-{
-    ai_train::ModelBlobDataWriter *data_writer = ai_train::ModelBlobDataWriter::createI(writer, ai_train::ModelBlobTypeSupport::get_instance);
+as_model_blob_datawriter(DDS::DataWriter* writer) {
+    ai_train::ModelBlobDataWriter* data_writer = ai_train::ModelBlobDataWriter::createI(writer, ai_train::ModelBlobTypeSupport::get_instance);
     return std::unique_ptr<ai_train::ModelBlobDataWriter, ModelBlobDataWriterDeleter>(data_writer);
 }
 
@@ -260,23 +293,20 @@ as_model_blob_datawriter(DDS::DataWriter *writer)
 // narrow 工厂函数（DataReader）
 // ================================
 static std::unique_ptr<ai_train::TrainCmdDataReader, TrainCmdDataReaderDeleter>
-as_train_cmd_datareader(DDS::DataReader *reader)
-{
-    ai_train::TrainCmdDataReader *data_reader = ai_train::TrainCmdDataReader::createI(reader, ai_train::TrainCmdTypeSupport::get_instance);
+as_train_cmd_datareader(DDS::DataReader* reader) {
+    ai_train::TrainCmdDataReader* data_reader = ai_train::TrainCmdDataReader::createI(reader, ai_train::TrainCmdTypeSupport::get_instance);
     return std::unique_ptr<ai_train::TrainCmdDataReader, TrainCmdDataReaderDeleter>(data_reader);
 }
 
 static std::unique_ptr<ai_train::ClientUpdateDataReader, ClientUpdateDataReaderDeleter>
-as_client_update_datareader(DDS::DataReader *reader)
-{
-    ai_train::ClientUpdateDataReader *data_reader = ai_train::ClientUpdateDataReader::createI(reader, ai_train::ClientUpdateTypeSupport::get_instance);
+as_client_update_datareader(DDS::DataReader* reader) {
+    ai_train::ClientUpdateDataReader* data_reader = ai_train::ClientUpdateDataReader::createI(reader, ai_train::ClientUpdateTypeSupport::get_instance);
     return std::unique_ptr<ai_train::ClientUpdateDataReader, ClientUpdateDataReaderDeleter>(data_reader);
 }
 
 static std::unique_ptr<ai_train::ModelBlobDataReader, ModelBlobDataReaderDeleter>
-as_model_blob_datareader(DDS::DataReader *reader)
-{
-    ai_train::ModelBlobDataReader *data_reader = ai_train::ModelBlobDataReader::createI(reader, ai_train::ModelBlobTypeSupport::get_instance);
+as_model_blob_datareader(DDS::DataReader* reader) {
+    ai_train::ModelBlobDataReader* data_reader = ai_train::ModelBlobDataReader::createI(reader, ai_train::ModelBlobTypeSupport::get_instance);
     return std::unique_ptr<ai_train::ModelBlobDataReader, ModelBlobDataReaderDeleter>(data_reader);
 }
 
@@ -285,41 +315,40 @@ as_model_blob_datareader(DDS::DataReader *reader)
 // ----------------------
 
 // trampoline 类，允许 Python 重写虚函数
-class PyReadCondition : public DDS::ReadCondition
-{
+class PyReadCondition : public DDS::ReadCondition {
 public:
     using ReadCondition::ReadCondition;
 
-    DDS::DataReader *get_datareader() override
-    {
+    DDS::DataReader* get_datareader() override {
         PYBIND11_OVERRIDE_PURE(
-            DDS::DataReader *,
+            DDS::DataReader*,
             DDS::ReadCondition,
-            get_datareader);
+            get_datareader
+        );
     }
 
-    DDS::SampleStateMask get_sample_state_mask() override
-    {
+    DDS::SampleStateMask get_sample_state_mask() override {
         PYBIND11_OVERRIDE_PURE(
             DDS::SampleStateMask,
             DDS::ReadCondition,
-            get_sample_state_mask);
+            get_sample_state_mask   
+        );
     }
 
-    DDS::ViewStateMask get_view_state_mask() override
-    {
+    DDS::ViewStateMask get_view_state_mask() override {
         PYBIND11_OVERRIDE_PURE(
             DDS::ViewStateMask,
             DDS::ReadCondition,
-            get_view_state_mask);
+            get_view_state_mask
+        );
     }
 
-    DDS::InstanceStateMask get_instance_state_mask() override
-    {
+    DDS::InstanceStateMask get_instance_state_mask() override {
         PYBIND11_OVERRIDE_PURE(
             DDS::InstanceStateMask,
             DDS::ReadCondition,
-            get_instance_state_mask);
+            get_instance_state_mask
+        );
     }
 };
 
@@ -394,7 +423,7 @@ PYBIND11_MODULE(DDS_Train_DataStructure, m)
     m.def("as_train_cmd_datawriter", &as_train_cmd_datawriter);
     m.def("as_client_update_datawriter", &as_client_update_datawriter);
     m.def("as_model_blob_datawriter", &as_model_blob_datawriter);
-
+    
     m.def("as_train_cmd_datareader", &as_train_cmd_datareader);
     m.def("as_client_update_datareader", &as_client_update_datareader);
     m.def("as_model_blob_datareader", &as_model_blob_datareader);
@@ -434,24 +463,121 @@ PYBIND11_MODULE(DDS_Train_DataStructure, m)
     m.attr("DISPOSED_INSTANCE_STATE") = DDS::NOT_ALIVE_DISPOSED_INSTANCE_STATE;
     m.attr("NO_WRITERS_INSTANCE_STATE") = DDS::NOT_ALIVE_NO_WRITERS_INSTANCE_STATE;
 
-    py::class_<DDS::ReadCondition, PyReadCondition, std::shared_ptr<DDS::ReadCondition>>(m, "ReadCondition")
+    // 基类 Condition，使用 shared_ptr
+    py::class_<DDS::Condition, std::shared_ptr<DDS::Condition>>(m, "Condition");
+
+    // ConditionSeq 专用封装
+    py::class_<DDS::ConditionSeq>(m, "ConditionSeq")
+        .def(py::init<DDS_ULong>(), py::arg("max") = 16)
+
+        // 获取长度
+        .def("length", [](const DDS::ConditionSeq& self) {
+        return static_cast<size_t>(self.length());
+            })
+
+        // 获取指定索引的元素，返回 shared_ptr<Condition>
+        .def("get_at", [](DDS::ConditionSeq& self, size_t i) {
+        if (i >= self.length()) throw py::index_error();
+        DDS::ConditionPtr ptr = self.get_at(static_cast<DDS_ULong>(i));
+        return ptr;  // Python 层接收 shared_ptr
+            }, py::return_value_policy::reference)
+
+        // 设置指定索引元素，接受 shared_ptr<Condition>
+        .def("set_at", [](DDS::ConditionSeq& self, size_t i, const DDS::ConditionPtr& cond) {
+        if (i >= self.length()) throw py::index_error();
+        if (!self.set_at(static_cast<DDS_ULong>(i), cond))
+            throw std::runtime_error("set_at failed");
+            })
+
+        // 添加元素到末尾
+        .def("append", [](DDS::ConditionSeq& self, const DDS::ConditionPtr& cond) {
+        if (!self.append(cond))
+            throw std::runtime_error("append failed");
+            })
+
+        // 清空序列
+        .def("clear", [](DDS::ConditionSeq& self) {
+        if (!self.clear()) throw std::runtime_error("clear failed");
+            })
+
+        // 转为 Python list（返回 shared_ptr 列表）
+        .def("to_list", [](DDS::ConditionSeq& self) {
+        py::list result;
+        DDS_ULong len = self.length();
+        for (DDS_ULong i = 0; i < len; ++i)
+            result.append(self.get_at(i));
+        return result;
+            })
+
+        // 从 Python list 填充序列
+        .def("from_list", [](DDS::ConditionSeq& self, const py::list& lst) {
+        DDS_ULong len = static_cast<DDS_ULong>(lst.size());
+        self.ensure_length(len, len);
+        for (DDS_ULong i = 0; i < len; ++i) {
+            DDS::ConditionPtr cond = lst[i].cast<DDS::ConditionPtr>();
+            self.set_at(i, cond);
+        }
+        return true;
+            });
+
+    py::class_<DDS::ReadCondition, PyReadCondition, DDS::Condition, std::shared_ptr<DDS::ReadCondition>>(m, "ReadCondition")
         .def("get_datareader", &DDS::ReadCondition::get_datareader, py::return_value_policy::reference)
         .def("get_sample_state_mask", &DDS::ReadCondition::get_sample_state_mask)
         .def("get_view_state_mask", &DDS::ReadCondition::get_view_state_mask)
         .def("get_instance_state_mask", &DDS::ReadCondition::get_instance_state_mask);
 
     py::class_<DDS::WaitSet>(m, "WaitSet")
-        .def(py::init<>()) // 构造函数
+        .def(py::init<>())   // 构造函数
         // attach_condition
-        .def("attach_condition", [](DDS::WaitSet &self, DDS::Condition *cond)
-             { return self.attach_condition(cond); }, py::arg("condition"))
+        .def("attach_condition",
+            [](DDS::WaitSet& self, DDS::Condition* cond) {
+                return self.attach_condition(cond);
+            },
+            py::arg("condition"))
         // detach_condition
-        .def("detach_condition", [](DDS::WaitSet &self, DDS::Condition *cond)
-             { return self.detach_condition(cond); }, py::arg("condition"))
+        .def("detach_condition",
+            [](DDS::WaitSet& self, DDS::Condition* cond) {
+                return self.detach_condition(cond);
+            },
+            py::arg("condition"))
         // wait
-        .def("wait", [](DDS::WaitSet &self, DDS::ConditionSeq &seq, const DDS::Duration_t &timeout)
-             { return self.wait(seq, timeout); }, py::arg("active_conditions"), py::arg("timeout"))
+        .def("wait",
+            [](DDS::WaitSet& self, DDS::ConditionSeq& seq, const DDS::Duration_t& timeout) {
+                return self.wait(seq, timeout);
+            },
+            py::arg("active_conditions"), py::arg("timeout"))
         // get_conditions
-        .def("get_conditions", [](DDS::WaitSet &self, DDS::ConditionSeq &seq)
-             { return self.get_conditions(seq); }, py::arg("attached_conditions"));
+        .def("get_conditions",
+            [](DDS::WaitSet& self, DDS::ConditionSeq& seq) {
+                return self.get_conditions(seq);
+            },
+            py::arg("attached_conditions"));
+
+    // 封装DDS_Duration_t
+    py::class_<DDS_Duration_t>(m, "DDS_Duration_t")
+        // 构造函数
+        .def(py::init<>())
+        .def(py::init<DDS_Long, DDS_ULong>(),
+            py::arg("sec"), py::arg("nanosec"))
+
+        // 属性
+        .def_readwrite("sec", &DDS_Duration_t::sec)
+        .def_readwrite("nanosec", &DDS_Duration_t::nanosec);
+
+    py::enum_<DDS_ReturnCode_t>(m, "DDS_ReturnCode_t")
+        .value("OK", DDS_RETCODE_OK)
+        .value("ERROR", DDS_RETCODE_ERROR)
+        .value("UNSUPPORTED", DDS_RETCODE_UNSUPPORTED)
+        .value("BAD_PARAMETER", DDS_RETCODE_BAD_PARAMETER)
+        .value("PRECONDITION_NOT_MET", DDS_RETCODE_PRECONDITION_NOT_MET)
+        .value("OUT_OF_RESOURCES", DDS_RETCODE_OUT_OF_RESOURCES)
+        .value("NOT_ENABLED", DDS_RETCODE_NOT_ENABLED)
+        .value("IMMUTABLE_POLICY", DDS_RETCODE_IMMUTABLE_POLICY)
+        .value("INCONSISTENT", DDS_RETCODE_INCONSISTENT)
+        .value("ALREADY_DELETED", DDS_RETCODE_ALREADY_DELETED)
+        .value("TIMEOUT", DDS_RETCODE_TIMEOUT)
+        .value("NO_DATA", DDS_RETCODE_NO_DATA)
+        .value("ILLEGAL_OPERATION", DDS_RETCODE_ILLEGAL_OPERATION)
+        .value("NOT_ALLOWED_BY_SEC", DDS_RETCODE_NOT_ALLOWED_BY_SEC)
+        .export_values();  // 让枚举值可以直接作为模块属性使用
 }
