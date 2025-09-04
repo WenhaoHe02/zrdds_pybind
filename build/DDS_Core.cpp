@@ -22,7 +22,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(DDS_Core, m)
+void bind_core(py::module &m)
 {
     m.doc() = "Python bindings for DDS Subscriber and related classes";
 
@@ -172,32 +172,6 @@ PYBIND11_MODULE(DDS_Core, m)
                  }
                  return status; // 直接返回 Python 可用的 PublicationMatchedStatus 对象
              });
-
-    // // WorkerResult / Claim 举例 DataWriter 绑定（保留你原有实现）
-    // struct WorkerResult
-    // {
-    //     std::string batch_id;
-    //     std::string model_id;
-    //     std::string worker_id;
-    // };
-    // struct Claim
-    // {
-    //     std::string batch_id;
-    //     std::string worker_id;
-    //     int queue_length;
-    // };
-
-    // py::class_<DDS::ZRDDSDataWriter<ai_train::TrainCmd>, DDS::DataWriter>(m, "WorkerResultDataWriter")
-    //     .def("write", &DDS::ZRDDSDataWriter<ai_train::TrainCmd>::write,
-    //          py::arg("data"),
-    //          py::arg("handle") = DDS::HANDLE_NIL_NATIVE,
-    //          py::call_guard<py::gil_scoped_release>());
-
-    // py::class_<DDS::ZRDDSDataWriter<Claim>, DDS::DataWriter>(m, "ClaimDataWriter")
-    //     .def("write", &DDS::ZRDDSDataWriter<Claim>::write,
-    //          py::arg("data"),
-    //          py::arg("handle") = DDS::HANDLE_NIL_NATIVE,
-    //          py::call_guard<py::gil_scoped_release>());
 
     // --------------------------
     // Publisher 绑定（create_datawriter wrapper）

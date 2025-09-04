@@ -1,14 +1,12 @@
-import DDS_Core
-import DDS_Train_DataStructure as dds
-import struct
+import DDS_All as dds
+import RegisterType as Project1
 import time
-import Project1
-import DDS_Listeners
+
 
 def init():
         # 从工厂创建DomainParticipant
-    factory = DDS_Core.DomainParticipantFactory.get_instance()
-    participant = factory.create_participant(0, DDS_Core.DOMAINPARTICIPANT_QOS_DEFAULT, None, 0)
+    factory = dds.DomainParticipantFactory.get_instance()
+    participant = factory.create_participant(0, dds.DOMAINPARTICIPANT_QOS_DEFAULT, None, 0)
     if participant is None:
         print("创建DomainParticipant失败")
         return
@@ -17,12 +15,12 @@ def init():
     Project1.register_all_types(participant)
     
     # 创建Publisher和Subscriber
-    publisher = participant.create_publisher(DDS_Core.PUBLISHER_QOS_DEFAULT, None, 0)
+    publisher = participant.create_publisher(dds.PUBLISHER_QOS_DEFAULT, None, 0)
     if publisher is None:
         print("创建Publisher失败")
         return
         
-    subscriber = participant.create_subscriber(DDS_Core.SUBSCRIBER_QOS_DEFAULT, None, 0)
+    subscriber = participant.create_subscriber(dds.SUBSCRIBER_QOS_DEFAULT, None, 0)
     if subscriber is None:
         print("创建Subscriber失败")
         return
@@ -31,14 +29,14 @@ def init():
     
     # 使用base_bindings中已定义的类型进行测试
     # 创建Topic (使用WorkerResult类型，该类型在base_bindings中已定义)
-    topic = participant.create_topic("TrainCmd", "TrainCmd", DDS_Core.TOPIC_QOS_DEFAULT, None, 0)
+    topic = participant.create_topic("TrainCmd", "TrainCmd", dds.TOPIC_QOS_DEFAULT, None, 0)
     if topic is None:
         print("创建Topic失败 - TrainCmd类型可能未在DDS中注册")
     else:
         print("成功创建Topic")
 
         # 使用Publisher创建DataWriter
-    writer = publisher.create_datawriter(topic, DDS_Core.DATAWRITER_QOS_DEFAULT, None, 0)
+    writer = publisher.create_datawriter(topic, dds.DATAWRITER_QOS_DEFAULT, None, 0)
     if writer is None:
         print("创建DataWriter失败")
     else:
