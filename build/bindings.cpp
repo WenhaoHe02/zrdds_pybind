@@ -22,7 +22,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(Project1, m)
+PYBIND11_MODULE(PyddsCore, m)
 {
     m.doc() = "Python bindings for DDS Subscriber and related classes";
 
