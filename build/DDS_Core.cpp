@@ -22,7 +22,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(PyddsCore, m)
+PYBIND11_MODULE(DDS_Core, m)
 {
     m.doc() = "Python bindings for DDS Subscriber and related classes";
 
@@ -275,6 +275,8 @@ PYBIND11_MODULE(PyddsCore, m)
                             DDS::DomainParticipantQos qos = qos_obj.cast<DDS::DomainParticipantQos>();
                             return factory->create_participant(domain_id, qos, listener, mask); }, py::arg("domainId"), py::arg("qos") = py::none(), py::arg("listener") = py::none(), py::arg("mask") = 0, py::return_value_policy::reference)
 
+        .def("delete_participant", &DDS::DomainParticipantFactory::delete_participant, "删除指定的域参与者。在调用该方法之前需要保证该域参与者的所有子实体都已经被删除。否则将会返回错误", py::arg("a_dp"))
+
         .def("get_default_participant_qos", [](DDS::DomainParticipantFactory &self, DDS::DomainParticipantQos &qoslist)
              { return self.get_default_participant_qos(qoslist); }, "获取该工厂为域参与者保存的默认QoS配置", py::arg("qoslist"))
 
@@ -282,6 +284,6 @@ PYBIND11_MODULE(PyddsCore, m)
              { return self.get_qos(qoslist); }, "获取DomainParticipantFactory的QoS设置", py::arg("qoslist"));
 
     // --------------------------
-    // 结束模块
+    // 结束模块s
     // --------------------------
 }
