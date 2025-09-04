@@ -81,6 +81,16 @@ PYBIND11_MODULE(DDS_Core, m)
         .def(py::init<>());
 
     // --------------------------
+    // TypeSupport 绑定
+    // --------------------------
+    // py::class_<DDS::TypeSupport>(m, "TypeSupport")
+    //     .def("get_type_name", &DDS::TypeSupport::get_type_name)
+
+    //     .def("register_type", &DDS::TypeSupport::register_type, py::arg("participant"), py::arg("type_name"))
+
+    //     .def("unregister_type", &DDS::TypeSupport::unregister_type, py::arg("participant"), py::arg("type_name"));
+
+    // --------------------------
     // Entity / Topic / DataReader / DataWriter / Publisher / Subscriber / Participant 绑定
     // --------------------------
     py::class_<DDS::Entity>(m, "Entity")
@@ -254,7 +264,9 @@ PYBIND11_MODULE(DDS_Core, m)
                                     mask);
                             }
                             DDS_TopicQos qos = qos_obj.cast<DDS_TopicQos>();
-                            return part->create_topic(topic_name.c_str(), type_name.c_str(), qos, listener, mask); }, py::return_value_policy::reference, py::arg("topic_name"), py::arg("type_name"), py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0);
+                            return part->create_topic(topic_name.c_str(), type_name.c_str(), qos, listener, mask); }, py::return_value_policy::reference, py::arg("topic_name"), py::arg("type_name"), py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0)
+
+        .def("delete_topic", &DDS::DomainParticipant::delete_topic, py::arg("a_topic"));
 
     // --------------------------
     // DomainParticipantFactory 绑定（get_instance / create_participant wrapper / get_default_participant_qos / get_qos）
@@ -263,19 +275,23 @@ PYBIND11_MODULE(DDS_Core, m)
         .def_static("get_instance", &DDS::DomainParticipantFactory::get_instance,
                     py::return_value_policy::reference)
 
+        .def_static("get_instance_w_qos", &DDS::DomainParticipantFactory::get_instance_w_qos,
+                    py::arg("qoslist"),
+                    py::return_value_policy::reference)
+
         .def("create_participant", [](DDS::DomainParticipantFactory *factory, int domain_id, py::object qos_obj, DDS::DomainParticipantListener *listener, int mask) -> DDS::DomainParticipant *
              {
-                            if (qos_obj.is_none() || (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1))
-                            {
-                                return factory->create_participant(domain_id,
-                                    DDS::DOMAINPARTICIPANT_QOS_DEFAULT,
-                                    listener,
-                                    mask);
-                            }
-                            DDS::DomainParticipantQos qos = qos_obj.cast<DDS::DomainParticipantQos>();
-                            return factory->create_participant(domain_id, qos, listener, mask); }, py::arg("domainId"), py::arg("qos") = py::none(), py::arg("listener") = py::none(), py::arg("mask") = 0, py::return_value_policy::reference)
+                                        if (qos_obj.is_none() || (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1))
+                                        {
+                                            return factory->create_participant(domain_id,
+                                                DDS::DOMAINPARTICIPANT_QOS_DEFAULT,
+                                                listener,
+                                                mask);
+                                        }
+                                        DDS::DomainParticipantQos qos = qos_obj.cast<DDS::DomainParticipantQos>();
+                                        return factory->create_participant(domain_id, qos, listener, mask); }, py::arg("domainId"), py::arg("qos") = py::none(), py::arg("listener") = py::none(), py::arg("mask") = 0, py::return_value_policy::reference)
 
-        .def("delete_participant", &DDS::DomainParticipantFactory::delete_participant, "删除指定的域参与者。在调用该方法之前需要保证该域参与者的所有子实体都已经被删除。否则将会返回错误", py::arg("a_dp"))
+        .def("delete_participant", &DDS::DomainParticipantFactory::delete_participant, py::arg("a_dp"))
 
         .def("get_default_participant_qos", [](DDS::DomainParticipantFactory &self, DDS::DomainParticipantQos &qoslist)
              { return self.get_default_participant_qos(qoslist); }, "获取该工厂为域参与者保存的默认QoS配置", py::arg("qoslist"))

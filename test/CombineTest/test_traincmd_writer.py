@@ -1,6 +1,6 @@
 # 测试应用层 write
-from Project1 import DomainParticipantFactory
-from dds_pybindings import TrainCmd, TrainCmdDataWriter
+from DDS_Core import DomainParticipantFactory
+from DDS_Train_DataStructure import TrainCmd, TrainCmdDataWriter
 
 # 1. 获取工厂 & 创建 DomainParticipant
 factory = DomainParticipantFactory.get_instance()
@@ -28,10 +28,10 @@ topic = participant.create_topic(
 )
 
 # 4. 创建 DataWriter（注意：返回的是 TrainCmdDataWriter 而不是裸 DataWriter）
-writer = publisher.create_datawriter(topic, -1, None, 0)
+# writer = publisher.create_datawriter(topic, -1, None, 0)
 
 
-print(type(writer))  # 应该是 <class 'dds_pybindings.TrainCmdDataWriter'>
+# print(type(writer))  # 应该是 <class 'dds_pybindings.TrainCmdDataWriter'>
 # writer = TrainCmdDataWriter.__cast__(writer)  # 这里需要把基类 DataWriter 转为具体类型
 
 # 5. 构造 TrainCmd 消息
@@ -42,6 +42,4 @@ cmd.epochs = 10
 cmd.lr = 0.01
 cmd.seed = 1234
 
-# 6. 写消息
-ret = writer.write(ai_train::TrainCmd)
-print("Write result:", ret)
+print(participant.delete_topic(topic))
