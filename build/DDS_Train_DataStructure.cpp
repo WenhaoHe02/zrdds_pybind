@@ -179,7 +179,7 @@ void bind_sequence_mapped(py::module_ &m, const char *name)
 // ================================
 template <typename DDSWriterType, typename MsgType, typename MsgWrapper, typename Deleter>
 void bind_datawriter(py::module_ &m, const char *py_class_name) {
-    py::class_<DDSWriterType, std::unique_ptr<DDSWriterType, Deleter>>(m, py_class_name)
+    py::class_<DDSWriterType,DDS::DataWriter, std::unique_ptr<DDSWriterType, Deleter>>(m, py_class_name)
         .def("write", [](DDSWriterType &writer, const MsgWrapper &msg_wrapper) {
             const MsgType &msg = static_cast<const MsgType &>(msg_wrapper);
             return writer.write(msg, DDS::HANDLE_NIL_NATIVE);
@@ -189,7 +189,7 @@ void bind_datawriter(py::module_ &m, const char *py_class_name) {
 // DataReader 绑定模板（去掉DDS::DataReader基类）
 template <typename DDSReaderType, typename MsgType, typename SeqType, typename MsgWrapper, typename Deleter>
 void bind_datareader(py::module_& m, const char* py_class_name) {
-    py::class_<DDSReaderType, std::unique_ptr<DDSReaderType, Deleter>>(m, py_class_name)
+    py::class_<DDSReaderType,DDS::DataReader, std::unique_ptr<DDSReaderType, Deleter>>(m, py_class_name)
         .def("read", [](DDSReaderType& reader,
             SeqType& dataSeq,
             DDS::SampleInfoSeq& infoSeq,
@@ -265,49 +265,6 @@ void bind_datareader(py::module_& m, const char* py_class_name) {
                 return reader.return_loan(dataSeq, infoSeq);
             });
 
-}
-
-
-// ================================
-// narrow 工厂函数（DataWriter）
-// ================================
-static std::unique_ptr<ai_train::TrainCmdDataWriter, TrainCmdDataWriterDeleter>
-as_train_cmd_datawriter(DDS::DataWriter* writer) {
-    ai_train::TrainCmdDataWriter* data_writer = ai_train::TrainCmdDataWriter::createI(writer, ai_train::TrainCmdTypeSupport::get_instance);
-    return std::unique_ptr<ai_train::TrainCmdDataWriter, TrainCmdDataWriterDeleter>(data_writer);
-}
-
-static std::unique_ptr<ai_train::ClientUpdateDataWriter, ClientUpdateDataWriterDeleter>
-as_client_update_datawriter(DDS::DataWriter* writer) {
-    ai_train::ClientUpdateDataWriter* data_writer = ai_train::ClientUpdateDataWriter::createI(writer, ai_train::ClientUpdateTypeSupport::get_instance);
-    return std::unique_ptr<ai_train::ClientUpdateDataWriter, ClientUpdateDataWriterDeleter>(data_writer);
-}
-
-static std::unique_ptr<ai_train::ModelBlobDataWriter, ModelBlobDataWriterDeleter>
-as_model_blob_datawriter(DDS::DataWriter* writer) {
-    ai_train::ModelBlobDataWriter* data_writer = ai_train::ModelBlobDataWriter::createI(writer, ai_train::ModelBlobTypeSupport::get_instance);
-    return std::unique_ptr<ai_train::ModelBlobDataWriter, ModelBlobDataWriterDeleter>(data_writer);
-}
-
-// ================================
-// narrow 工厂函数（DataReader）
-// ================================
-static std::unique_ptr<ai_train::TrainCmdDataReader, TrainCmdDataReaderDeleter>
-as_train_cmd_datareader(DDS::DataReader* reader) {
-    ai_train::TrainCmdDataReader* data_reader = ai_train::TrainCmdDataReader::createI(reader, ai_train::TrainCmdTypeSupport::get_instance);
-    return std::unique_ptr<ai_train::TrainCmdDataReader, TrainCmdDataReaderDeleter>(data_reader);
-}
-
-static std::unique_ptr<ai_train::ClientUpdateDataReader, ClientUpdateDataReaderDeleter>
-as_client_update_datareader(DDS::DataReader* reader) {
-    ai_train::ClientUpdateDataReader* data_reader = ai_train::ClientUpdateDataReader::createI(reader, ai_train::ClientUpdateTypeSupport::get_instance);
-    return std::unique_ptr<ai_train::ClientUpdateDataReader, ClientUpdateDataReaderDeleter>(data_reader);
-}
-
-static std::unique_ptr<ai_train::ModelBlobDataReader, ModelBlobDataReaderDeleter>
-as_model_blob_datareader(DDS::DataReader* reader) {
-    ai_train::ModelBlobDataReader* data_reader = ai_train::ModelBlobDataReader::createI(reader, ai_train::ModelBlobTypeSupport::get_instance);
-    return std::unique_ptr<ai_train::ModelBlobDataReader, ModelBlobDataReaderDeleter>(data_reader);
 }
 
 // ----------------------
@@ -418,15 +375,6 @@ PYBIND11_MODULE(DDS_Train_DataStructure, m)
     bind_datareader<ai_train::TrainCmdDataReader, ai_train::TrainCmd, ai_train::TrainCmdSeq, TrainCmdWrapper, TrainCmdDataReaderDeleter>(m, "TrainCmdDataReader");
     bind_datareader<ai_train::ClientUpdateDataReader, ai_train::ClientUpdate, ai_train::ClientUpdateSeq, ClientUpdateWrapper, ClientUpdateDataReaderDeleter>(m, "ClientUpdateDataReader");
     bind_datareader<ai_train::ModelBlobDataReader, ai_train::ModelBlob, ai_train::ModelBlobSeq, ModelBlobWrapper, ModelBlobDataReaderDeleter>(m, "ModelBlobDataReader");
-
-    // 绑定转换函数
-    m.def("as_train_cmd_datawriter", &as_train_cmd_datawriter);
-    m.def("as_client_update_datawriter", &as_client_update_datawriter);
-    m.def("as_model_blob_datawriter", &as_model_blob_datawriter);
-    
-    m.def("as_train_cmd_datareader", &as_train_cmd_datareader);
-    m.def("as_client_update_datareader", &as_client_update_datareader);
-    m.def("as_model_blob_datareader", &as_model_blob_datareader);
 
     // SampleInfo 封装
     py::class_<DDS_SampleInfo>(m, "SampleInfo")

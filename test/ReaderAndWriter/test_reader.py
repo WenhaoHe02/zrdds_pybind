@@ -1,5 +1,5 @@
-import DDS_Train_DataStructure as dds
 import DDS_Core
+import DDS_Train_DataStructure as dds
 import struct
 import time
 import Project1

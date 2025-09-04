@@ -1,5 +1,5 @@
-import DDS_Train_DataStructure as dds
 import DDS_Core
+import DDS_Train_DataStructure as dds
 import struct
 import time
 import Project1
@@ -44,6 +44,11 @@ def init():
     else:
         print("成功创建DataWriter")
         print("Writer类型:", type(writer))
+
+        # 测试get_publication_matched_status
+        status= writer.get_publication_matched_status()
+        print("DataWriter的匹配状态:", status)
+        print("当前匹配的订阅者数量:", status.current_count)
         
         # 创建 TrainCmd 对象
         train_cmd = dds.TrainCmd()
@@ -62,4 +67,5 @@ def init():
 
 
 if __name__ == "__main__":
+    
     init()
