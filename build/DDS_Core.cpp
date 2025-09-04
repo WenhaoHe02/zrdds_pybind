@@ -115,6 +115,26 @@ PYBIND11_MODULE(DDS_Core, m)
     m.attr("DATAREADER_QOS_USE_TOPIC_QOS") = py::int_(-2);
 
     // --------------------------
+    // StatusKind 枚举绑定
+    // --------------------------
+
+    py::enum_<DDS::StatusKind>(m, "StatusKind", py::arithmetic())
+        .value("INCONSISTENT_TOPIC_STATUS", DDS_INCONSISTENT_TOPIC_STATUS)
+        .value("OFFERED_DEADLINE_MISSED_STATUS", DDS_OFFERED_DEADLINE_MISSED_STATUS)
+        .value("REQUESTED_DEADLINE_MISSED_STATUS", DDS_REQUESTED_DEADLINE_MISSED_STATUS)
+        .value("OFFERED_INCOMPATIBLE_QOS_STATUS", DDS_OFFERED_INCOMPATIBLE_QOS_STATUS)
+        .value("REQUESTED_INCOMPATIBLE_QOS_STATUS", DDS_REQUESTED_INCOMPATIBLE_QOS_STATUS)
+        .value("SAMPLE_LOST_STATUS", DDS_SAMPLE_LOST_STATUS)
+        .value("SAMPLE_REJECTED_STATUS", DDS_SAMPLE_REJECTED_STATUS)
+        .value("DATA_ON_READERS_STATUS", DDS_DATA_ON_READERS_STATUS)
+        .value("DATA_AVAILABLE_STATUS", DDS_DATA_AVAILABLE_STATUS)
+        .value("LIVELINESS_LOST_STATUS", DDS_LIVELINESS_LOST_STATUS)
+        .value("LIVELINESS_CHANGED_STATUS", DDS_LIVELINESS_CHANGED_STATUS)
+        .value("PUBLICATION_MATCHED_STATUS", DDS_PUBLICATION_MATCHED_STATUS)
+        .value("SUBSCRIPTION_MATCHED_STATUS", DDS_SUBSCRIPTION_MATCHED_STATUS)
+        .export_values();
+
+    // --------------------------
     // DataReader 绑定（create / set_listener）
     // --------------------------
     py::class_<DDS::DataReader, DDS::Entity>(m, "DataReader")
