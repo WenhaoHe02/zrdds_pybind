@@ -325,7 +325,7 @@ public:
 
 // 绑定转换
 // 将所有类型和功能绑定到Python模块
-PYBIND11_MODULE(dds_pybindings, m)
+PYBIND11_MODULE(DDS_Train_DataStructure, m)
 {
     // 先绑定基类，用于继承关系
     py::class_<ai_train::TrainCmd>(m, "TrainCmdBase")
