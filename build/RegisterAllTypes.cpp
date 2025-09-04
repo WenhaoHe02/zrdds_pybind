@@ -35,7 +35,7 @@ struct WorkerResult
 struct Claim
 {
     std::string batch_id;
-    git rm - r-- cached.std::string worker_id;
+    std::string worker_id;
     int queue_length;
 };
 
@@ -59,7 +59,7 @@ void register_all_types(DDS::DomainParticipant *dp)
 PYBIND11_MODULE(Project1, m)
 {
     // 假设你已经在别的文件里绑定了 DomainParticipantFactory / DomainParticipant
-    py::class_<DDS::DomainParticipant, DDS::Entity, std::unique_ptr<DDS::DomainParticipant, py::nodelete>>(m, "DomainParticipant");
+    // py::class_<DDS::DomainParticipant, DDS::Entity, std::unique_ptr<DDS::DomainParticipant, py::nodelete>>(m, "DomainParticipant");
 
     // 绑定 register_all_types
     m.def("register_all_types", &register_all_types,
@@ -67,5 +67,4 @@ PYBIND11_MODULE(Project1, m)
           "Register all known DDS types with the given DomainParticipant");
 
     // 如果需要的话，也可以把 QoS 常量一起导出
-    m.attr("DOMAINPARTICIPANT_QOS_DEFAULT") = py::cast(DDS::DOMAINPARTICIPANT_QOS_DEFAULT);
 }
