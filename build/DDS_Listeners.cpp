@@ -12,9 +12,13 @@
 
 #include "PublisherListener.h"
 
+#include "SubscriberListener.h"
+
 #include "TopicListener.h"
 
 #include "DomainParticipantListener.h"
+
+#include <iostream>
 
 namespace py = pybind11;
 
@@ -40,34 +44,42 @@ void bind_Listener(py::module &m)
              { return "<DDS.Listener>"; });
 }
 
-// 绑定基础 DataReaderListener
-void bind_DataReaderListener(py::module &m)
-{
-    py::class_<DDS::DataReaderListener, DDS::Listener>(m, "DataReaderListener")
-        .def(py::init<>())
-        .def("__repr__", [](const DDS::DataReaderListener &)
-             { return "<DDS.DataReaderListener>"; })
-#ifdef _ZRDDS_INCLUDE_DEADLINE_QOS
-        .def("on_requested_deadline_missed", [](DDS::DataReaderListener &self, void *reader, const DDS::RequestedDeadlineMissedStatus &status)
-             { self.on_requested_deadline_missed(static_cast<DDS::DataReader *>(reader), status); }, py::arg("reader"), py::arg("status"))
-#endif
-        .def("on_data_available", [](DDS::DataReaderListener &self, void *reader)
-             { self.on_data_available(static_cast<DDS::DataReader *>(reader)); }, py::arg("reader"))
-        .def("on_data_arrived", [](DDS::DataReaderListener &self, void *reader, void *sample, const DDS::SampleInfo &info)
-             { self.on_data_arrived(static_cast<DDS::DataReader *>(reader), sample, info); }, py::arg("reader"), py::arg("sample"), py::arg("info"))
-        .def("on_sample_rejected", [](DDS::DataReaderListener &self, void *reader, const DDS::SampleRejectedStatus &status)
-             { self.on_sample_rejected(static_cast<DDS::DataReader *>(reader), status); }, py::arg("reader"), py::arg("status"))
-#ifdef _ZRDDS_INCLUDE_LIVELINESS_QOS
-        .def("on_liveliness_changed", [](DDS::DataReaderListener &self, void *reader, const DDS::LivelinessChangedStatus &status)
-             { self.on_liveliness_changed(static_cast<DDS::DataReader *>(reader), status); }, py::arg("reader"), py::arg("status"))
-#endif
-        .def("on_requested_incompatible_qos", [](DDS::DataReaderListener &self, void *reader, const DDS::RequestedIncompatibleQosStatus &status)
-             { self.on_requested_incompatible_qos(static_cast<DDS::DataReader *>(reader), status); }, py::arg("reader"), py::arg("status"))
-        .def("on_subscription_matched", [](DDS::DataReaderListener &self, void *reader, const DDS::SubscriptionMatchedStatus &status)
-             { self.on_subscription_matched(static_cast<DDS::DataReader *>(reader), status); }, py::arg("reader"), py::arg("status"))
-        .def("on_sample_lost", [](DDS::DataReaderListener &self, void *reader, const DDS::SampleLostStatus &status)
-             { self.on_sample_lost(static_cast<DDS::DataReader *>(reader), status); }, py::arg("reader"), py::arg("status"));
-}
+//// 绑定基础 DataReaderListener
+// void bind_DataReaderListener(py::module& m) {
+//     py::class_<DDS::DataReaderListener, DDS::Listener>(m, "DataReaderListener")
+//         .def(py::init<>())
+//         .def("__repr__", [](const DDS::DataReaderListener&) {
+//         return "<DDS.DataReaderListener>";
+//             })
+// #ifdef _ZRDDS_INCLUDE_DEADLINE_QOS
+//         .def("on_requested_deadline_missed", [](DDS::DataReaderListener& self, void* reader, const DDS::RequestedDeadlineMissedStatus& status) {
+//         self.on_requested_deadline_missed(static_cast<DDS::DataReader*>(reader), status);
+//             }, py::arg("reader"), py::arg("status"))
+// #endif
+//         .def("on_data_available", [](DDS::DataReaderListener& self, void* reader) {
+//         self.on_data_available(static_cast<DDS::DataReader*>(reader));
+//             }, py::arg("reader"))
+//         .def("on_data_arrived", [](DDS::DataReaderListener& self, void* reader, void* sample, const DDS::SampleInfo& info) {
+//         self.on_data_arrived(static_cast<DDS::DataReader*>(reader), sample, info);
+//             }, py::arg("reader"), py::arg("sample"), py::arg("info"))
+//         .def("on_sample_rejected", [](DDS::DataReaderListener& self, void* reader, const DDS::SampleRejectedStatus& status) {
+//         self.on_sample_rejected(static_cast<DDS::DataReader*>(reader), status);
+//             }, py::arg("reader"), py::arg("status"))
+// #ifdef _ZRDDS_INCLUDE_LIVELINESS_QOS
+//         .def("on_liveliness_changed", [](DDS::DataReaderListener& self, void* reader, const DDS::LivelinessChangedStatus& status) {
+//         self.on_liveliness_changed(static_cast<DDS::DataReader*>(reader), status);
+//             }, py::arg("reader"), py::arg("status"))
+// #endif
+//         .def("on_requested_incompatible_qos", [](DDS::DataReaderListener& self, void* reader, const DDS::RequestedIncompatibleQosStatus& status) {
+//         self.on_requested_incompatible_qos(static_cast<DDS::DataReader*>(reader), status);
+//             }, py::arg("reader"), py::arg("status"))
+//         .def("on_subscription_matched", [](DDS::DataReaderListener& self, void* reader, const DDS::SubscriptionMatchedStatus& status) {
+//         self.on_subscription_matched(static_cast<DDS::DataReader*>(reader), status);
+//             }, py::arg("reader"), py::arg("status"))
+//         .def("on_sample_lost", [](DDS::DataReaderListener& self, void* reader, const DDS::SampleLostStatus& status) {
+//         self.on_sample_lost(static_cast<DDS::DataReader*>(reader), status);
+//             }, py::arg("reader"), py::arg("status"));
+// }
 
 // 绑定模板类 SimpleDataReaderListener（需用户指定模板参数）
 template <typename T, typename TSeq, typename TDataReader>
@@ -145,6 +157,89 @@ void bind_DomainParticipantListener(py::module &m)
         .def("__repr__", [](const DDS::DomainParticipantListener &)
              { return "<DDS.DomainParticipantListener>"; })
         .def("on_domain_received", &DDS::DomainParticipantListener::on_domain_received);
+}
+
+// 1) Trampoline：把 C++ 虚函数安全地“转发”到 Python
+class PyDataReaderListener : public DDS::DataReaderListener
+{
+public:
+     using DDS::DataReaderListener::DataReaderListener;
+
+     void on_data_available(DDS::DataReader *reader) override
+     {
+          std::cerr << "[C++] trampoline:on_data_available enter, reader=" << reader << std::endl;
+          py::gil_scoped_acquire gil;
+          try
+          {
+               PYBIND11_OVERLOAD(void, DDS::DataReaderListener, on_data_available, reader);
+          }
+          catch (const py::error_already_set &e)
+          {
+               std::cerr << "[C++] Python exception in on_data_available: " << e.what() << std::endl;
+               PyErr_Print(); // 打印 Python traceback 到 stderr
+          }
+          std::cerr << "[C++] trampoline:on_data_available exit" << std::endl;
+     }
+
+     // 如果你在 C++ 有实现 on_data_arrived 这类“预解码”回调，也一并覆盖
+     void on_data_arrived(DDS::DataReader *reader, void *sample, const DDS::SampleInfo &info) override
+     {
+          py::gil_scoped_acquire gil;
+          PYBIND11_OVERLOAD(void, DDS::DataReaderListener, on_data_arrived, reader, sample, info);
+     }
+
+#ifdef _ZRDDS_INCLUDE_DEADLINE_QOS
+     void on_requested_deadline_missed(DDS::DataReader *reader, const DDS::RequestedDeadlineMissedStatus &status) override
+     {
+          py::gil_scoped_acquire gil;
+          PYBIND11_OVERLOAD(void, DDS::DataReaderListener, on_requested_deadline_missed, reader, status);
+     }
+#endif
+
+#ifdef _ZRDDS_INCLUDE_LIVELINESS_QOS
+     void on_liveliness_changed(DDS::DataReader *reader, const DDS::LivelinessChangedStatus &status) override
+     {
+          py::gil_scoped_acquire gil;
+          PYBIND11_OVERLOAD(void, DDS::DataReaderListener, on_liveliness_changed, reader, status);
+     }
+#endif
+
+     void on_sample_rejected(DDS::DataReader *reader, const DDS::SampleRejectedStatus &status) override
+     {
+          py::gil_scoped_acquire gil;
+          PYBIND11_OVERLOAD(void, DDS::DataReaderListener, on_sample_rejected, reader, status);
+     }
+
+     void on_requested_incompatible_qos(DDS::DataReader *reader, const DDS::RequestedIncompatibleQosStatus &status) override
+     {
+          py::gil_scoped_acquire gil;
+          PYBIND11_OVERLOAD(void, DDS::DataReaderListener, on_requested_incompatible_qos, reader, status);
+     }
+
+     void on_subscription_matched(DDS::DataReader *reader, const DDS::SubscriptionMatchedStatus &status) override
+     {
+          py::gil_scoped_acquire gil;
+          PYBIND11_OVERLOAD(void, DDS::DataReaderListener, on_subscription_matched, reader, status);
+     }
+
+     void on_sample_lost(DDS::DataReader *reader, const DDS::SampleLostStatus &status) override
+     {
+          py::gil_scoped_acquire gil;
+          PYBIND11_OVERLOAD(void, DDS::DataReaderListener, on_sample_lost, reader, status);
+     }
+};
+
+// 2) 绑定：注意第二个模板参数是 PyDataReaderListener（trampoline）
+void bind_DataReaderListener(py::module &m)
+{
+     py::class_<DDS::DataReaderListener, PyDataReaderListener, DDS::Listener>(m, "DataReaderListener")
+         .def(py::init<>())
+         .def("__repr__", [](const DDS::DataReaderListener &)
+              { return "<DDS.DataReaderListener>"; });
+
+     // 这里**不再**用 lambda 去 .def("on_data_available", []{ self.on_data_available(...) })，
+     // 因为真正的回调由 DDS 触发时，会走到上面的 trampoline。
+     // 如需从 Python 主动调用基类实现，可再按需补充 .def(...) 绑定到非虚接口。
 }
 
 PYBIND11_MODULE(DDS_Listeners, m)

@@ -49,8 +49,7 @@ PYBIND11_MODULE(DDS_Core, m)
                     throw std::runtime_error("value must be length 16");
                 std::copy(vec.begin(), vec.end(), h.value);
             });
-    py::class_<DDS::ReturnCode_t>(m, "ReturnCode_t");
-    py::class_<DDS::DataReaderListener>(m, "DataReaderListener");
+    // py::class_<DDS::DataReaderListener>(m, "DataReaderListener");
     py::class_<DDS::DataReaderQos>(m, "DataReaderQos")
         .def(py::init<>());
 
@@ -62,21 +61,21 @@ PYBIND11_MODULE(DDS_Core, m)
         .def_readwrite("current_count_change", &DDS::SubscriptionMatchedStatus::current_count_change)
         .def_readwrite("last_publication_handle", &DDS::SubscriptionMatchedStatus::last_publication_handle);
 
-    py::class_<DDS::SubscriberListener>(m, "SubscriberListener");
+    // py::class_<DDS::SubscriberListener>(m, "SubscriberListener");
     py::class_<DDS::SubscriberQos>(m, "SubscriberQos");
-    py::class_<DDS::DomainParticipantListener>(m, "DomainParticipantListener");
+    // py::class_<DDS::DomainParticipantListener>(m, "DomainParticipantListener");
     py::class_<DDS::DomainParticipantQos>(m, "DomainParticipantQos")
         .def(py::init<>());
     py::class_<DDS::DomainParticipantFactoryQos>(m, "DomainParticipantFactoryQos")
         .def(py::init<>());
-    py::class_<DDS::DataWriterListener>(m, "DataWriterListener");
+    // py::class_<DDS::DataWriterListener>(m, "DataWriterListener");
     py::class_<DDS::DataWriterQos>(m, "DataWriterQos")
         .def(py::init<>());
-    py::class_<DDS::PublisherListener>(m, "PublisherListener")
-        .def(py::init<>());
+    // py::class_<DDS::PublisherListener>(m, "PublisherListener")
+    //     .def(py::init<>());
     py::class_<DDS::PublisherQos>(m, "PublisherQos")
         .def(py::init<>());
-    py::class_<DDS::TopicListener>(m, "TopicListener");
+    // py::class_<DDS::TopicListener>(m, "TopicListener");
     py::class_<DDS::TopicQos>(m, "TopicQos")
         .def(py::init<>());
 
