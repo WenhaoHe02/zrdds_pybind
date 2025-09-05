@@ -54,7 +54,9 @@ void bind_core(py::module &m)
             });
     // py::class_<DDS::DataReaderListener>(m, "DataReaderListener");
     py::class_<DDS::DataReaderQos>(m, "DataReaderQos")
-        .def(py::init<>());
+        .def(py::init<>())
+        .def_readwrite("reliability", &DDS::DataReaderQos::reliability)
+        .def_readwrite("history", &DDS::DataReaderQos::history);
 
     py::class_<DDS::SubscriptionMatchedStatus>(m, "SubscriptionMatchedStatus")
         .def(py::init<>())
@@ -64,21 +66,22 @@ void bind_core(py::module &m)
         .def_readwrite("current_count_change", &DDS::SubscriptionMatchedStatus::current_count_change)
         .def_readwrite("last_publication_handle", &DDS::SubscriptionMatchedStatus::last_publication_handle);
 
-    // py::class_<DDS::SubscriberListener>(m, "SubscriberListener");
     py::class_<DDS::SubscriberQos>(m, "SubscriberQos");
-    // py::class_<DDS::DomainParticipantListener>(m, "DomainParticipantListener");
+
     py::class_<DDS::DomainParticipantQos>(m, "DomainParticipantQos")
         .def(py::init<>());
     py::class_<DDS::DomainParticipantFactoryQos>(m, "DomainParticipantFactoryQos")
         .def(py::init<>());
-    // py::class_<DDS::DataWriterListener>(m, "DataWriterListener");
+
+    // 在DataWriterQos中添加reliability和history属性
     py::class_<DDS::DataWriterQos>(m, "DataWriterQos")
-        .def(py::init<>());
-    // py::class_<DDS::PublisherListener>(m, "PublisherListener")
-    //     .def(py::init<>());
+        .def(py::init<>())
+        .def_readwrite("reliability", &DDS::DataWriterQos::reliability)
+        .def_readwrite("history", &DDS::DataWriterQos::history);
+
     py::class_<DDS::PublisherQos>(m, "PublisherQos")
         .def(py::init<>());
-    // py::class_<DDS::TopicListener>(m, "TopicListener");
+
     py::class_<DDS::TopicQos>(m, "TopicQos")
         .def(py::init<>());
 
@@ -94,19 +97,11 @@ void bind_core(py::module &m)
         .value("KEEP_ALL_HISTORY_QOS", DDS::KEEP_ALL_HISTORY_QOS)
         .export_values();
 
-    py::class_<DDS::PublicationMatchedStatus>(m, "PublicationMatchedStatus")
-        .def(py::init<>())
-        .def_readwrite("total_count", &DDS::PublicationMatchedStatus::total_count)
-        .def_readwrite("total_count_change", &DDS::PublicationMatchedStatus::total_count_change)
-        .def_readwrite("current_count", &DDS::PublicationMatchedStatus::current_count)
-        .def_readwrite("current_count_change", &DDS::PublicationMatchedStatus::current_count_change)
-        .def_readwrite("last_subscription_handle", &DDS::PublicationMatchedStatus::last_subscription_handle);
-
     // 添加DDS_Duration_t结构体绑定
-    py::class_<DDS::Duration_t>(m, "Duration_t")
-        .def(py::init<>())
-        .def_readwrite("sec", &DDS::Duration_t::sec)
-        .def_readwrite("nanosec", &DDS::Duration_t::nanosec);
+    // py::class_<DDS::Duration_t>(m, "Duration_t")
+    //     .def(py::init<>())
+    //     .def_readwrite("sec", &DDS::Duration_t::sec)
+    //     .def_readwrite("nanosec", &DDS::Duration_t::nanosec);
 
     // 添加DDS_ReliabilityQosPolicy结构体绑定
     py::class_<DDS::ReliabilityQosPolicy>(m, "ReliabilityQosPolicy")
@@ -119,18 +114,6 @@ void bind_core(py::module &m)
         .def(py::init<>())
         .def_readwrite("kind", &DDS::HistoryQosPolicy::kind)
         .def_readwrite("depth", &DDS::HistoryQosPolicy::depth);
-
-    // 在DataReaderQos中添加reliability和history属性
-    py::class_<DDS::DataReaderQos>(m, "DataReaderQos")
-        .def(py::init<>())
-        .def_readwrite("reliability", &DDS::DataReaderQos::reliability)
-        .def_readwrite("history", &DDS::DataReaderQos::history);
-
-    // 在DataWriterQos中添加reliability和history属性
-    py::class_<DDS::DataWriterQos>(m, "DataWriterQos")
-        .def(py::init<>())
-        .def_readwrite("reliability", &DDS::DataWriterQos::reliability)
-        .def_readwrite("history", &DDS::DataWriterQos::history);
 
     py::class_<DDS::Entity>(m, "Entity")
         .def("get_statuscondition", &DDS::Entity::get_statuscondition,
