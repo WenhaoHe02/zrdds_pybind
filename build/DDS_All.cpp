@@ -20,13 +20,17 @@
 
 namespace py = pybind11;
 
-void bind_core(pybind11::module& m);
-void bind_listeners(pybind11::module& m);
-void bind_data(pybind11::module& m);
+void bind_core(pybind11::module &m);
+void bind_listeners(pybind11::module &m);
+void bind_data(pybind11::module &m);
+void bind_infer(pybind11::module &m);
+void bind_type(pybind11::module &m);
 
 PYBIND11_MODULE(DDS_All, m)
 {
     bind_core(m);
     bind_listeners(m);
     bind_data(m);
+    bind_infer(m);
+    bind_type(m);
 }

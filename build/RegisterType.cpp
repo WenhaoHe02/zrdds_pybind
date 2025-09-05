@@ -32,7 +32,7 @@ void register_all_types(DDS::DomainParticipant *dp)
     ai_train::TrainCmdTypeSupport::get_instance()->register_type(dp, "ModelBlob");
 }
 
-PYBIND11_MODULE(RegisterType, m)
+void bind_type(py::module &m)
 {
 
     m.def("register_all_types", &register_all_types,
