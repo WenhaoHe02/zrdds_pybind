@@ -18,6 +18,9 @@
 #include "../ZRDDSCoreInterface/DomainParticipantFactoryQos.h"
 #include "../ZRDDSCoreInterface/DefaultQos.h"
 #include "../ZRDDSCoreInterface/SubscriptionMatchedStatus.h"
+#include "../ZRDDSCoreInterface/HistoryQosPolicy.h"
+#include "../ZRDDSCoreInterface/ReliabilityQosPolicy.h"
+
 #include "../datastruct_cpp/ai_train.h"
 
 namespace py = pybind11;
@@ -79,19 +82,56 @@ void bind_core(py::module &m)
     py::class_<DDS::TopicQos>(m, "TopicQos")
         .def(py::init<>());
 
-    // --------------------------
-    // TypeSupport 绑定
-    // --------------------------
-    // py::class_<DDS::TypeSupport>(m, "TypeSupport")
-    //     .def("get_type_name", &DDS::TypeSupport::get_type_name)
+    // 添加ReliabilityQosPolicyKind枚举绑定
+    py::enum_<DDS::ReliabilityQosPolicyKind>(m, "ReliabilityQosPolicyKind")
+        .value("BEST_EFFORT_RELIABILITY_QOS", DDS::BEST_EFFORT_RELIABILITY_QOS)
+        .value("RELIABLE_RELIABILITY_QOS", DDS::RELIABLE_RELIABILITY_QOS)
+        .export_values();
 
-    //     .def("register_type", &DDS::TypeSupport::register_type, py::arg("participant"), py::arg("type_name"))
+    // 添加HistoryQosPolicyKind枚举绑定
+    py::enum_<DDS::HistoryQosPolicyKind>(m, "HistoryQosPolicyKind")
+        .value("KEEP_LAST_HISTORY_QOS", DDS::KEEP_LAST_HISTORY_QOS)
+        .value("KEEP_ALL_HISTORY_QOS", DDS::KEEP_ALL_HISTORY_QOS)
+        .export_values();
 
-    //     .def("unregister_type", &DDS::TypeSupport::unregister_type, py::arg("participant"), py::arg("type_name"));
+    py::class_<DDS::PublicationMatchedStatus>(m, "PublicationMatchedStatus")
+        .def(py::init<>())
+        .def_readwrite("total_count", &DDS::PublicationMatchedStatus::total_count)
+        .def_readwrite("total_count_change", &DDS::PublicationMatchedStatus::total_count_change)
+        .def_readwrite("current_count", &DDS::PublicationMatchedStatus::current_count)
+        .def_readwrite("current_count_change", &DDS::PublicationMatchedStatus::current_count_change)
+        .def_readwrite("last_subscription_handle", &DDS::PublicationMatchedStatus::last_subscription_handle);
 
-    // --------------------------
-    // Entity / Topic / DataReader / DataWriter / Publisher / Subscriber / Participant 绑定
-    // --------------------------
+    // 添加DDS_Duration_t结构体绑定
+    py::class_<DDS::Duration_t>(m, "Duration_t")
+        .def(py::init<>())
+        .def_readwrite("sec", &DDS::Duration_t::sec)
+        .def_readwrite("nanosec", &DDS::Duration_t::nanosec);
+
+    // 添加DDS_ReliabilityQosPolicy结构体绑定
+    py::class_<DDS::ReliabilityQosPolicy>(m, "ReliabilityQosPolicy")
+        .def(py::init<>())
+        .def_readwrite("kind", &DDS::ReliabilityQosPolicy::kind)
+        .def_readwrite("max_blocking_time", &DDS::ReliabilityQosPolicy::max_blocking_time);
+
+    // 添加DDS_HistoryQosPolicy结构体绑定
+    py::class_<DDS::HistoryQosPolicy>(m, "HistoryQosPolicy")
+        .def(py::init<>())
+        .def_readwrite("kind", &DDS::HistoryQosPolicy::kind)
+        .def_readwrite("depth", &DDS::HistoryQosPolicy::depth);
+
+    // 在DataReaderQos中添加reliability和history属性
+    py::class_<DDS::DataReaderQos>(m, "DataReaderQos")
+        .def(py::init<>())
+        .def_readwrite("reliability", &DDS::DataReaderQos::reliability)
+        .def_readwrite("history", &DDS::DataReaderQos::history);
+
+    // 在DataWriterQos中添加reliability和history属性
+    py::class_<DDS::DataWriterQos>(m, "DataWriterQos")
+        .def(py::init<>())
+        .def_readwrite("reliability", &DDS::DataWriterQos::reliability)
+        .def_readwrite("history", &DDS::DataWriterQos::history);
+
     py::class_<DDS::Entity>(m, "Entity")
         .def("get_statuscondition", &DDS::Entity::get_statuscondition,
              py::return_value_policy::reference)
@@ -195,7 +235,16 @@ void bind_core(py::module &m)
 
                 // 否则期望是 DataWriterQos
                 DDS::DataWriterQos qos = qos_obj.cast<DDS::DataWriterQos>();
-                return pub->create_datawriter(topic_obj.cast<DDS::Topic*>(), qos, listener, mask); }, py::return_value_policy::reference, py::arg("the_topic"), py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0);
+                return pub->create_datawriter(topic_obj.cast<DDS::Topic*>(), qos, listener, mask); }, py::return_value_policy::reference, py::arg("the_topic"), py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0)
+
+        .def("get_default_datawriter_qos", [](DDS::Publisher &self, DDS::DataWriterQos &qoslist)
+             {
+                DDS::ReturnCode_t ret = self.get_default_datawriter_qos(qoslist);
+                if (ret != DDS::RETCODE_OK)
+                {
+                    throw std::runtime_error("get_default_datawriter_qos failed");
+                }
+                return ret; }, py::arg("qoslist"));
 
     // --------------------------
     // Subscriber 绑定（create_datareader wrapper）
@@ -216,8 +265,15 @@ void bind_core(py::module &m)
                 }
 
                 DDS::DataReaderQos qos = qos_obj.cast<DDS::DataReaderQos>();
-                return sub->create_datareader(topic_obj.cast<DDS::Topic*>(), qos, listener, mask); }, py::return_value_policy::reference, py::arg("a_topic"), py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0);
-
+                return sub->create_datareader(topic_obj.cast<DDS::Topic*>(), qos, listener, mask); }, py::return_value_policy::reference, py::arg("a_topic"), py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0)
+        .def("get_default_datareader_qos", [](DDS::Subscriber &self, DDS::DataReaderQos &qoslist)
+             {
+                DDS::ReturnCode_t ret = self.get_default_datareader_qos(qoslist);
+                if (ret != DDS::RETCODE_OK)
+                {
+                    throw std::runtime_error("get_default_datareader_qos failed");
+                }
+                return ret; }, py::arg("qoslist"));
     // --------------------------
     // DomainParticipant 绑定（create_subscriber / create_publisher / create_topic wrappers）
     // --------------------------
@@ -259,7 +315,18 @@ void bind_core(py::module &m)
                             DDS_TopicQos qos = qos_obj.cast<DDS_TopicQos>();
                             return part->create_topic(topic_name.c_str(), type_name.c_str(), qos, listener, mask); }, py::return_value_policy::reference, py::arg("topic_name"), py::arg("type_name"), py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0)
 
-        .def("delete_topic", &DDS::DomainParticipant::delete_topic, py::arg("a_topic"));
+        .def("delete_topic", &DDS::DomainParticipant::delete_topic, py::arg("a_topic"))
+        .def("delete_contained_entities", [](DDS::DomainParticipant &self)
+             {
+            DDS::ReturnCode_t ret = self.delete_contained_entities();
+            if (ret != DDS::RETCODE_OK) {
+                if (ret == DDS::RETCODE_PRECONDITION_NOT_MET) {
+                    throw std::runtime_error("delete_contained_entities failed: precondition not met");
+                } else {
+                    throw std::runtime_error("delete_contained_entities failed");
+                }
+            }
+            return ret; });
 
     // --------------------------
     // DomainParticipantFactory 绑定（get_instance / create_participant wrapper / get_default_participant_qos / get_qos）
