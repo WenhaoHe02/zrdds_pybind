@@ -8,4 +8,5 @@
 !test/**
 !ListenersTest
 !datastruct_cpp
+!ai_infer
 !DDS_CORE_README.md
