@@ -28,6 +28,8 @@ void register_all_types(DDS::DomainParticipant *dp)
 
     // 注册所有类型
     ai_train::TrainCmdTypeSupport::get_instance()->register_type(dp, "TrainCmd");
+    ai_train::TrainCmdTypeSupport::get_instance()->register_type(dp, "ClientUpdate");
+    ai_train::TrainCmdTypeSupport::get_instance()->register_type(dp, "ModelBlob");
 }
 
 PYBIND11_MODULE(RegisterType, m)
