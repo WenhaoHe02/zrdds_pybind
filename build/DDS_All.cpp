@@ -17,16 +17,14 @@
 #include "../ZRDDSCoreInterface/PublisherQos.h"
 #include "../ZRDDSCoreInterface/DomainParticipantFactoryQos.h"
 #include "../ZRDDSCoreInterface/DefaultQos.h"
-#include "../datastruct_cpp/ai_trainTypeSupport.h"
 
 namespace py = pybind11;
 
-void bind_core(pybind11::module &m);
-void bind_listeners(pybind11::module &m);
-void bind_data(pybind11::module &m);
+void bind_core(pybind11::module& m);
+void bind_listeners(pybind11::module& m);
+void bind_data(pybind11::module& m);
 
 PYBIND11_MODULE(DDS_All, m)
-a
 {
     bind_core(m);
     bind_listeners(m);

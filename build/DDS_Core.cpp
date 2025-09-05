@@ -19,10 +19,9 @@
 #include "../ZRDDSCoreInterface/DefaultQos.h"
 #include "../ZRDDSCoreInterface/SubscriptionMatchedStatus.h"
 #include "../datastruct_cpp/ai_train.h"
-
 namespace py = pybind11;
 
-void bind_core(py::module &m)
+void bind_core(py::module& m)
 {
     m.doc() = "Python bindings for DDS Subscriber and related classes";
 
@@ -39,12 +38,10 @@ void bind_core(py::module &m)
         // 用 property 手动绑定 value[16]
         .def_property(
             "value",
-            [](const DDS_InstanceHandle_t &h)
-            {
+            [](const DDS_InstanceHandle_t& h) {
                 return std::vector<uint8_t>(h.value, h.value + 16); // 复制成 Python list
             },
-            [](DDS_InstanceHandle_t &h, const std::vector<uint8_t> &vec)
-            {
+            [](DDS_InstanceHandle_t& h, const std::vector<uint8_t>& vec) {
                 if (vec.size() != 16)
                     throw std::runtime_error("value must be length 16");
                 std::copy(vec.begin(), vec.end(), h.value);
@@ -140,15 +137,13 @@ void bind_core(py::module &m)
         .def("enable", &DDS::DataReader::enable)
         .def("set_listener", &DDS::DataReader::set_listener,
              py::arg("listener") = py::none(), py::arg("mask") = 0)
-        .def("get_subscription_matched_status", [](DDS::DataReader &self)
-             {
-                 DDS::SubscriptionMatchedStatus status;
-                 DDS::ReturnCode_t ret = self.get_subscription_matched_status(status);
-                 if (ret != DDS::RETCODE_OK)
-                 {
-                     throw std::runtime_error("get_subscription_matched_status failed");
-                 }
-                 return status; // 返回 status 给 Python
+        .def("get_subscription_matched_status", [](DDS::DataReader& self) {
+        DDS::SubscriptionMatchedStatus status;
+        DDS::ReturnCode_t ret = self.get_subscription_matched_status(status);
+        if (ret != DDS::RETCODE_OK) {
+            throw std::runtime_error("get_subscription_matched_status failed");
+        }
+        return status; // 返回 status 给 Python
              });
 
     // DataWriter 抽象绑定（用于继承）
@@ -162,15 +157,13 @@ void bind_core(py::module &m)
         .def_readwrite("last_subscription_handle", &DDS::PublicationMatchedStatus::last_subscription_handle);
 
     py::class_<DDS::DataWriter, DDS::Entity, std::unique_ptr<DDS::DataWriter, py::nodelete>>(m, "DataWriter")
-        .def("get_publication_matched_status", [](DDS::DataWriter &self)
-             {
-                 DDS::PublicationMatchedStatus status;
-                 DDS::ReturnCode_t ret = self.get_publication_matched_status(status);
-                 if (ret != DDS::RETCODE_OK)
-                 {
-                     throw std::runtime_error("get_publication_matched_status failed");
-                 }
-                 return status; // 直接返回 Python 可用的 PublicationMatchedStatus 对象
+        .def("get_publication_matched_status", [](DDS::DataWriter& self) {
+        DDS::PublicationMatchedStatus status;
+        DDS::ReturnCode_t ret = self.get_publication_matched_status(status);
+        if (ret != DDS::RETCODE_OK) {
+            throw std::runtime_error("get_publication_matched_status failed");
+        }
+        return status; // 直接返回 Python 可用的 PublicationMatchedStatus 对象
              });
 
     // --------------------------
@@ -178,121 +171,112 @@ void bind_core(py::module &m)
     // --------------------------
     py::class_<DDS::Publisher, DDS::Entity, std::unique_ptr<DDS::Publisher, py::nodelete>>(m, "Publisher")
         // create_datawriter wrapper: 支持 qos 为 None / -1 / PublisherQos 对象
-        .def("create_datawriter", [](DDS::Publisher *pub, py::object topic_obj, py::object qos_obj, py::object listener_obj, int mask) -> DDS::DataWriter *
-             {
-                DDS::DataWriterListener* listener = nullptr;
-                if (!listener_obj.is_none()) {
-                    listener = listener_obj.cast<DDS::DataWriterListener*>();
-                }
+        .def("create_datawriter", [](DDS::Publisher* pub, py::object topic_obj, py::object qos_obj, py::object listener_obj, int mask) -> DDS::DataWriter* {
+        DDS::DataWriterListener* listener = nullptr;
+        if (!listener_obj.is_none()) {
+            listener = listener_obj.cast<DDS::DataWriterListener*>();
+        }
 
-                // 处理 qos: None 或 -1 -> use sentinel DDS::DATAWRITER_QOS_DEFAULT
-                if (qos_obj.is_none() || (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1)) {
-                    return pub->create_datawriter(topic_obj.cast<DDS::Topic*>(),
-                        DDS::DATAWRITER_QOS_DEFAULT,
-                        listener,
-                        mask);
-                }
+        // 处理 qos: None 或 -1 -> use sentinel DDS::DATAWRITER_QOS_DEFAULT
+        if (qos_obj.is_none() || (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1)) {
+            return pub->create_datawriter(topic_obj.cast<DDS::Topic*>(),
+                                          DDS::DATAWRITER_QOS_DEFAULT,
+                                          listener,
+                                          mask);
+        }
 
-                // 否则期望是 DataWriterQos
-                DDS::DataWriterQos qos = qos_obj.cast<DDS::DataWriterQos>();
-                return pub->create_datawriter(topic_obj.cast<DDS::Topic*>(), qos, listener, mask); }, py::return_value_policy::reference, py::arg("the_topic"), py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0);
+        // 否则期望是 DataWriterQos
+        DDS::DataWriterQos qos = qos_obj.cast<DDS::DataWriterQos>();
+        return pub->create_datawriter(topic_obj.cast<DDS::Topic*>(), qos, listener, mask); }, py::return_value_policy::reference, py::arg("the_topic"), py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0);
 
     // --------------------------
     // Subscriber 绑定（create_datareader wrapper）
     // --------------------------
     py::class_<DDS::Subscriber, DDS::Entity, std::unique_ptr<DDS::Subscriber, py::nodelete>>(m, "Subscriber")
-        .def("create_datareader", [](DDS::Subscriber *sub, py::object topic_obj, py::object qos_obj, py::object listener_obj, int mask) -> DDS::DataReader *
-             {
-                DDS::DataReaderListener* listener = nullptr;
-                if (!listener_obj.is_none()) {
-                    listener = listener_obj.cast<DDS::DataReaderListener*>();
-                }
+        .def("create_datareader", [](DDS::Subscriber* sub, py::object topic_obj, py::object qos_obj, py::object listener_obj, int mask) -> DDS::DataReader* {
+        DDS::DataReaderListener* listener = nullptr;
+        if (!listener_obj.is_none()) {
+            listener = listener_obj.cast<DDS::DataReaderListener*>();
+        }
 
-                if (qos_obj.is_none() || (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1)) {
-                    return sub->create_datareader(topic_obj.cast<DDS::Topic*>(),
-                        DDS::DATAREADER_QOS_DEFAULT,
-                        listener,
-                        mask);
-                }
+        if (qos_obj.is_none() || (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1)) {
+            return sub->create_datareader(topic_obj.cast<DDS::Topic*>(),
+                                          DDS::DATAREADER_QOS_DEFAULT,
+                                          listener,
+                                          mask);
+        }
 
-                DDS::DataReaderQos qos = qos_obj.cast<DDS::DataReaderQos>();
-                return sub->create_datareader(topic_obj.cast<DDS::Topic*>(), qos, listener, mask); }, py::return_value_policy::reference, py::arg("a_topic"), py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0);
+        DDS::DataReaderQos qos = qos_obj.cast<DDS::DataReaderQos>();
+        return sub->create_datareader(topic_obj.cast<DDS::Topic*>(), qos, listener, mask); }, py::return_value_policy::reference, py::arg("a_topic"), py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0);
 
     // --------------------------
     // DomainParticipant 绑定（create_subscriber / create_publisher / create_topic wrappers）
     // --------------------------
     py::class_<DDS::DomainParticipant, DDS::Entity, std::unique_ptr<DDS::DomainParticipant, py::nodelete>>(m, "DomainParticipant")
-        .def("create_subscriber", [](DDS::DomainParticipant *part, py::object qos_obj, py::object listener_obj, int mask) -> DDS::Subscriber *
-             {
-                DDS::SubscriberListener* listener = nullptr;
-                if (!listener_obj.is_none()) listener = listener_obj.cast<DDS::SubscriberListener*>();
+        .def("create_subscriber", [](DDS::DomainParticipant* part, py::object qos_obj, py::object listener_obj, int mask) -> DDS::Subscriber* {
+        DDS::SubscriberListener* listener = nullptr;
+        if (!listener_obj.is_none()) listener = listener_obj.cast<DDS::SubscriberListener*>();
+
+        if (qos_obj.is_none() || (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1)) {
+            return part->create_subscriber(DDS::SUBSCRIBER_QOS_DEFAULT, listener, mask);
+        }
+        DDS::SubscriberQos qos = qos_obj.cast<DDS::SubscriberQos>();
+        return part->create_subscriber(qos, listener, mask); }, py::return_value_policy::reference, py::arg("qos") = py::none(), py::arg("listener") = py::none(), py::arg("mask") = 0)
+
+        .def("create_publisher", [](DDS::DomainParticipant* part, py::object qos_obj, py::object listener_obj, int mask) -> DDS::Publisher* {
+            DDS::PublisherListener* listener = nullptr;
+            if (!listener_obj.is_none()) listener = listener_obj.cast<DDS::PublisherListener*>();
+
+            if (qos_obj.is_none() || (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1)) {
+                return part->create_publisher(DDS::PUBLISHER_QOS_DEFAULT, listener, mask);
+            }
+            DDS::PublisherQos qos = qos_obj.cast<DDS::PublisherQos>();
+            return part->create_publisher(qos, listener, mask); }, py::return_value_policy::reference, py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0)
+
+            .def("create_topic", [](DDS::DomainParticipant* part, const std::string& topic_name, const std::string& type_name, py::object qos_obj, py::object listener_obj, int mask) -> DDS::Topic* {
+                DDS::TopicListener* listener = nullptr;
+                if (!listener_obj.is_none()) listener = listener_obj.cast<DDS::TopicListener*>();
 
                 if (qos_obj.is_none() || (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1)) {
-                    return part->create_subscriber(DDS::SUBSCRIBER_QOS_DEFAULT, listener, mask);
+                    return part->create_topic(topic_name.c_str(),
+                                              type_name.c_str(),
+                                              DDS::TOPIC_QOS_DEFAULT,
+                                              listener,
+                                              mask);
                 }
-                DDS::SubscriberQos qos = qos_obj.cast<DDS::SubscriberQos>();
-                return part->create_subscriber(qos, listener, mask); }, py::return_value_policy::reference, py::arg("qos") = py::none(), py::arg("listener") = py::none(), py::arg("mask") = 0)
+                DDS_TopicQos qos = qos_obj.cast<DDS_TopicQos>();
+                return part->create_topic(topic_name.c_str(), type_name.c_str(), qos, listener, mask); }, py::return_value_policy::reference, py::arg("topic_name"), py::arg("type_name"), py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0)
 
-        .def("create_publisher", [](DDS::DomainParticipant *part, py::object qos_obj, py::object listener_obj, int mask) -> DDS::Publisher *
-             {
-                DDS::PublisherListener* listener = nullptr;
-                if (!listener_obj.is_none()) listener = listener_obj.cast<DDS::PublisherListener*>();
+                .def("delete_topic", &DDS::DomainParticipant::delete_topic, py::arg("a_topic"));
 
-                if (qos_obj.is_none() || (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1)) {
-                    return part->create_publisher(DDS::PUBLISHER_QOS_DEFAULT, listener, mask);
-                }
-                DDS::PublisherQos qos = qos_obj.cast<DDS::PublisherQos>();
-                return part->create_publisher(qos, listener, mask); }, py::return_value_policy::reference, py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0)
+                // --------------------------
+                // DomainParticipantFactory 绑定（get_instance / create_participant wrapper / get_default_participant_qos / get_qos）
+                // --------------------------
+                py::class_<DDS::DomainParticipantFactory, std::unique_ptr<DDS::DomainParticipantFactory, py::nodelete>>(m, "DomainParticipantFactory")
+                    .def_static("get_instance", &DDS::DomainParticipantFactory::get_instance,
+                                py::return_value_policy::reference)
 
-        .def("create_topic", [](DDS::DomainParticipant *part, const std::string &topic_name, const std::string &type_name, py::object qos_obj, py::object listener_obj, int mask) -> DDS::Topic *
-             {
-                            DDS::TopicListener* listener = nullptr;
-                            if (!listener_obj.is_none()) listener = listener_obj.cast<DDS::TopicListener*>();
+                    .def_static("get_instance_w_qos", &DDS::DomainParticipantFactory::get_instance_w_qos,
+                                py::arg("qoslist"),
+                                py::return_value_policy::reference)
 
-                            if (qos_obj.is_none() || (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1)) {
-                                return part->create_topic(topic_name.c_str(),
-                                    type_name.c_str(),
-                                    DDS::TOPIC_QOS_DEFAULT,
-                                    listener,
-                                    mask);
-                            }
-                            DDS_TopicQos qos = qos_obj.cast<DDS_TopicQos>();
-                            return part->create_topic(topic_name.c_str(), type_name.c_str(), qos, listener, mask); }, py::return_value_policy::reference, py::arg("topic_name"), py::arg("type_name"), py::arg("qoslist") = py::none(), py::arg("a_listener") = py::none(), py::arg("mask") = 0)
+                    .def("create_participant", [](DDS::DomainParticipantFactory* factory, int domain_id, py::object qos_obj, DDS::DomainParticipantListener* listener, int mask) -> DDS::DomainParticipant* {
+                    if (qos_obj.is_none() || (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1)) {
+                        return factory->create_participant(domain_id,
+                                                           DDS::DOMAINPARTICIPANT_QOS_DEFAULT,
+                                                           listener,
+                                                           mask);
+                    }
+                    DDS::DomainParticipantQos qos = qos_obj.cast<DDS::DomainParticipantQos>();
+                    return factory->create_participant(domain_id, qos, listener, mask); }, py::arg("domainId"), py::arg("qos") = py::none(), py::arg("listener") = py::none(), py::arg("mask") = 0, py::return_value_policy::reference)
 
-        .def("delete_topic", &DDS::DomainParticipant::delete_topic, py::arg("a_topic"));
+                    .def("delete_participant", &DDS::DomainParticipantFactory::delete_participant, py::arg("a_dp"))
 
-    // --------------------------
-    // DomainParticipantFactory 绑定（get_instance / create_participant wrapper / get_default_participant_qos / get_qos）
-    // --------------------------
-    py::class_<DDS::DomainParticipantFactory, std::unique_ptr<DDS::DomainParticipantFactory, py::nodelete>>(m, "DomainParticipantFactory")
-        .def_static("get_instance", &DDS::DomainParticipantFactory::get_instance,
-                    py::return_value_policy::reference)
+                        .def("get_default_participant_qos", [](DDS::DomainParticipantFactory& self, DDS::DomainParticipantQos& qoslist) { return self.get_default_participant_qos(qoslist); }, "获取该工厂为域参与者保存的默认QoS配置", py::arg("qoslist"))
 
-        .def_static("get_instance_w_qos", &DDS::DomainParticipantFactory::get_instance_w_qos,
-                    py::arg("qoslist"),
-                    py::return_value_policy::reference)
+                        .def("get_qos", [](DDS::DomainParticipantFactory& self, DDS_DomainParticipantFactoryQos& qoslist) { return self.get_qos(qoslist); }, "获取DomainParticipantFactory的QoS设置", py::arg("qoslist"));
 
-        .def("create_participant", [](DDS::DomainParticipantFactory *factory, int domain_id, py::object qos_obj, DDS::DomainParticipantListener *listener, int mask) -> DDS::DomainParticipant *
-             {
-                                        if (qos_obj.is_none() || (py::isinstance<py::int_>(qos_obj) && qos_obj.cast<int>() == -1))
-                                        {
-                                            return factory->create_participant(domain_id,
-                                                DDS::DOMAINPARTICIPANT_QOS_DEFAULT,
-                                                listener,
-                                                mask);
-                                        }
-                                        DDS::DomainParticipantQos qos = qos_obj.cast<DDS::DomainParticipantQos>();
-                                        return factory->create_participant(domain_id, qos, listener, mask); }, py::arg("domainId"), py::arg("qos") = py::none(), py::arg("listener") = py::none(), py::arg("mask") = 0, py::return_value_policy::reference)
-
-        .def("delete_participant", &DDS::DomainParticipantFactory::delete_participant, py::arg("a_dp"))
-
-        .def("get_default_participant_qos", [](DDS::DomainParticipantFactory &self, DDS::DomainParticipantQos &qoslist)
-             { return self.get_default_participant_qos(qoslist); }, "获取该工厂为域参与者保存的默认QoS配置", py::arg("qoslist"))
-
-        .def("get_qos", [](DDS::DomainParticipantFactory &self, DDS_DomainParticipantFactoryQos &qoslist)
-             { return self.get_qos(qoslist); }, "获取DomainParticipantFactory的QoS设置", py::arg("qoslist"));
-
-    // --------------------------
-    // 结束模块s
-    // --------------------------
+                    // --------------------------
+                    // 结束模块s
+                    // --------------------------
 }
