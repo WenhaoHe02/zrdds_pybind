@@ -10,41 +10,38 @@
 #include "../datastruct_cpp/ai_infer.h" // 生成头，类型都在 namespace data_structure 里
 #include "../datastruct_cpp/ai_inferDataReader.h"
 #include "../datastruct_cpp/ai_inferDataWriter.h"
-
+#include<WaitSet.h>
 #include "../datastruct_cpp/ai_infer.h"
 
 namespace py = pybind11;
 namespace ds = data_structure;
 // -------------------- Bytes <-> Python bytes --------------------
-static void py_to_bytes(const py::bytes &pybytes, ds::Bytes &dds_bytes)
+static void py_to_bytes(const py::bytes& pybytes, ds::Bytes& dds_bytes)
 {
     std::string temp = pybytes;
     DDS_ULong len = static_cast<DDS_ULong>(temp.size());
-    if (len > 0)
-    {
+    if (len > 0) {
         dds_bytes.value.ensure_length(len, len);
-        dds_bytes.value.from_array(reinterpret_cast<const DDS_Octet *>(temp.data()), len);
-    }
-    else
-    {
+        dds_bytes.value.from_array(reinterpret_cast<const DDS_Octet*>(temp.data()), len);
+    } else {
         dds_bytes.value.ensure_length(0, 0);
     }
 }
 
-static py::bytes bytes_to_py(const ds::Bytes &dds_bytes)
+static py::bytes bytes_to_py(const ds::Bytes& dds_bytes)
 {
     DDS_ULong len = dds_bytes.value.length();
     if (len == 0)
         return py::bytes();
 
-    const DDS_Octet *buf = dds_bytes.value.get_contiguous_buffer();
+    const DDS_Octet* buf = dds_bytes.value.get_contiguous_buffer();
     if (!buf)
         return py::bytes();
-    return py::bytes(reinterpret_cast<const char *>(buf), static_cast<size_t>(len));
+    return py::bytes(reinterpret_cast<const char*>(buf), static_cast<size_t>(len));
 }
 
 // -------------------- C-string field helpers (max 255) --------------------
-static std::string get_cstr(const DDS_Char *p)
+static std::string get_cstr(const DDS_Char* p)
 {
     return p ? std::string(p) : std::string();
 }
@@ -52,95 +49,84 @@ static std::string get_cstr(const DDS_Char *p)
 static constexpr size_t kMaxStr = 255;
 static constexpr size_t kBufLen = kMaxStr + 1;
 
-static void set_cstr(DDS_Char *&p, const std::string &s)
+static void set_cstr(DDS_Char*& p, const std::string& s)
 {
     if (s.size() > kMaxStr)
         throw std::runtime_error("string too long (>255)");
-    if (!p)
-    { // 懒分配
+    if (!p) { // 懒分配
         p = new DDS_Char[kBufLen]();
     }
     std::memcpy(p, s.data(), s.size());
     p[s.size()] = '\0';
 }
 
-static void copy_bytes(const ds::Bytes &src, ds::Bytes &dst)
+static void copy_bytes(const ds::Bytes& src, ds::Bytes& dst)
 {
     DDS_ULong len = src.value.length();
     dst.value.ensure_length(len, len);
-    const DDS_Octet *buf = src.value.get_contiguous_buffer();
+    const DDS_Octet* buf = src.value.get_contiguous_buffer();
     if (len)
         dst.value.from_array(buf, len);
 }
 
 template <typename Seq, typename Elem>
-static void copy_seq(const Seq &src, Seq &dst)
+static void copy_seq(const Seq& src, Seq& dst)
 {
     DDS_ULong len = src.length();
     dst.ensure_length(len, len);
-    for (DDS_ULong i = 0; i < len; ++i)
-    {
-        const Elem &e = src.get_at(i);
+    for (DDS_ULong i = 0; i < len; ++i) {
+        const Elem& e = src.get_at(i);
         dst.set_at(i, e); // 生成器的 set_at 通常会做元素级深拷
     }
 }
 
 // -------------------- Seq 映射（Base -> Wrapper） --------------------
 template <typename Seq, typename Base, typename Wrapper>
-void bind_sequence_mapped(py::module_ &m, const char *name)
+void bind_sequence_mapped(py::module_& m, const char* name)
 {
     py::class_<Seq>(m, name)
         .def(py::init<DDS_ULong>(), py::arg("max") = 16)
-        .def("length", [](const Seq &self)
-             { return static_cast<size_t>(self.length()); })
-        .def("get_at", [](Seq &self, size_t i)
-             {
+        .def("length", [](const Seq& self) { return static_cast<size_t>(self.length()); })
+        .def("get_at", [](Seq& self, size_t i) {
         if (i >= self.length()) throw py::index_error();
         const Base& elem = self.get_at(static_cast<DDS_ULong>(i));
         auto wrapper = new Wrapper();
         deep_copy(elem, *wrapper);
         return wrapper; }, py::return_value_policy::take_ownership)
-        .def("set_at", [](Seq &self, size_t i, const Wrapper &val)
-             {
-                 if (i >= self.length()) throw py::index_error();
-                 const Base& base_val = val;
-                 if (!self.set_at(static_cast<DDS_ULong>(i), base_val))
-                     throw std::runtime_error("set_at failed"); })
-        .def("append", [](Seq &self, const Wrapper &val)
-             {
-                 if (!self.append(static_cast<const Base&>(val)))
-                     throw std::runtime_error("append failed"); })
-        .def("clear", [](Seq &self)
-             {
-                          if (!self.clear()) throw std::runtime_error("clear failed"); })
-        .def("ensure_length", [](Seq &self, size_t length, size_t max)
-             {
-                          if (!self.ensure_length(static_cast<DDS_ULong>(length), static_cast<DDS_ULong>(max)))
-                              throw std::runtime_error("ensure_length failed"); })
-        .def("to_array", [](Seq &self)
-             {
-                                   py::list result;
-                                   DDS_ULong len = self.length();
-                                   for (DDS_ULong i = 0; i < len; ++i) {
-                                       const Base& elem = self.get_at(i);
-                                       auto wrapper = new Wrapper();
-                                       *static_cast<Base*>(wrapper) = elem;
-                                       result.append(py::cast(wrapper, py::return_value_policy::take_ownership));
-                                   }
-                                   return result; })
-        .def("from_array", [](Seq &self, const py::list &list)
-             {
-                                   DDS_ULong len = static_cast<DDS_ULong>(list.size());
-                                   self.ensure_length(len, len);
-                                   for (DDS_ULong i = 0; i < len; ++i) {
-                                       const Wrapper& wrapper = list[i].cast<const Wrapper&>();
-                                       self.set_at(i, static_cast<const Base&>(wrapper));
-                                   }
-                                   return true; });
+        .def("set_at", [](Seq& self, size_t i, const Wrapper& val) {
+            if (i >= self.length()) throw py::index_error();
+            const Base& base_val = val;
+            if (!self.set_at(static_cast<DDS_ULong>(i), base_val))
+                throw std::runtime_error("set_at failed"); })
+            .def("append", [](Seq& self, const Wrapper& val) {
+                if (!self.append(static_cast<const Base&>(val)))
+                    throw std::runtime_error("append failed"); })
+                .def("clear", [](Seq& self) {
+                    if (!self.clear()) throw std::runtime_error("clear failed"); })
+                    .def("ensure_length", [](Seq& self, size_t length, size_t max) {
+                        if (!self.ensure_length(static_cast<DDS_ULong>(length), static_cast<DDS_ULong>(max)))
+                            throw std::runtime_error("ensure_length failed"); })
+                        .def("to_array", [](Seq& self) {
+                            py::list result;
+                            DDS_ULong len = self.length();
+                            for (DDS_ULong i = 0; i < len; ++i) {
+                                const Base& elem = self.get_at(i);
+                                auto wrapper = new Wrapper();
+                                *static_cast<Base*>(wrapper) = elem;
+                                result.append(py::cast(wrapper, py::return_value_policy::take_ownership));
+                            }
+                            return result; })
+                            .def("from_array", [](Seq& self, const py::list& list) {
+                                DDS_ULong len = static_cast<DDS_ULong>(list.size());
+                                self.ensure_length(len, len);
+                                for (DDS_ULong i = 0; i < len; ++i) {
+                                    const Wrapper& wrapper = list[i].cast<const Wrapper&>();
+                                    self.set_at(i, static_cast<const Base&>(wrapper));
+                                }
+                                return true; });
 }
 
-struct TaskWrapper : ds::Task
-{
+struct TaskWrapper : ds::Task {
     TaskWrapper()
     {
         ds::TaskInitialize(this);
@@ -157,8 +143,7 @@ struct TaskWrapper : ds::Task
     }
 };
 
-struct ClaimWrapper : ds::Claim
-{
+struct ClaimWrapper : ds::Claim {
     ClaimWrapper()
     {
         ds::ClaimInitialize(this);
@@ -173,8 +158,7 @@ struct ClaimWrapper : ds::Claim
     }
 };
 
-struct OpenBatchWrapper : ds::OpenBatch
-{
+struct OpenBatchWrapper : ds::OpenBatch {
     OpenBatchWrapper()
     {
         ds::OpenBatchInitialize(this);
@@ -189,8 +173,7 @@ struct OpenBatchWrapper : ds::OpenBatch
     }
 };
 
-struct GrantWrapper : ds::Grant
-{
+struct GrantWrapper : ds::Grant {
     GrantWrapper()
     {
         ds::GrantInitialize(this);
@@ -205,8 +188,7 @@ struct GrantWrapper : ds::Grant
     }
 };
 
-struct WorkerTaskResultWrapper : ds::WorkerTaskResult
-{
+struct WorkerTaskResultWrapper : ds::WorkerTaskResult {
     WorkerTaskResultWrapper()
     {
         ds::WorkerTaskResultInitialize(this);
@@ -225,8 +207,7 @@ struct WorkerTaskResultWrapper : ds::WorkerTaskResult
     }
 };
 
-struct TaskListWrapper : ds::TaskList
-{
+struct TaskListWrapper : ds::TaskList {
     TaskListWrapper()
     {
         ds::TaskListInitialize(this);
@@ -243,8 +224,7 @@ struct TaskListWrapper : ds::TaskList
     }
 };
 
-struct WorkerResultWrapper : ds::WorkerResult
-{
+struct WorkerResultWrapper : ds::WorkerResult {
     WorkerResultWrapper()
     {
         ds::WorkerResultInitialize(this);
@@ -261,7 +241,7 @@ struct WorkerResultWrapper : ds::WorkerResult
     }
 };
 
-static void deep_copy(const ds::Task &src, TaskWrapper &dst)
+static void deep_copy(const ds::Task& src, TaskWrapper& dst)
 {
     if (src.request_id)
         set_cstr(dst.request_id, src.request_id);
@@ -272,7 +252,7 @@ static void deep_copy(const ds::Task &src, TaskWrapper &dst)
     copy_bytes(src.payload, dst.payload);
 }
 
-static void deep_copy(const ds::Claim &src, ClaimWrapper &dst)
+static void deep_copy(const ds::Claim& src, ClaimWrapper& dst)
 {
     if (src.batch_id)
         set_cstr(dst.batch_id, src.batch_id);
@@ -281,7 +261,7 @@ static void deep_copy(const ds::Claim &src, ClaimWrapper &dst)
     dst.queue_length = src.queue_length;
 }
 
-static void deep_copy(const ds::OpenBatch &src, OpenBatchWrapper &dst)
+static void deep_copy(const ds::OpenBatch& src, OpenBatchWrapper& dst)
 {
     if (src.batch_id)
         set_cstr(dst.batch_id, src.batch_id);
@@ -291,7 +271,7 @@ static void deep_copy(const ds::OpenBatch &src, OpenBatchWrapper &dst)
     dst.create_ts_ms = src.create_ts_ms;
 }
 
-static void deep_copy(const ds::Grant &src, GrantWrapper &dst)
+static void deep_copy(const ds::Grant& src, GrantWrapper& dst)
 {
     if (src.batch_id)
         set_cstr(dst.batch_id, src.batch_id);
@@ -299,7 +279,7 @@ static void deep_copy(const ds::Grant &src, GrantWrapper &dst)
         set_cstr(dst.winner_worker_id, src.winner_worker_id);
 }
 
-static void deep_copy(const ds::WorkerTaskResult &src, WorkerTaskResultWrapper &dst)
+static void deep_copy(const ds::WorkerTaskResult& src, WorkerTaskResultWrapper& dst)
 {
     if (src.request_id)
         set_cstr(dst.request_id, src.request_id);
@@ -312,7 +292,7 @@ static void deep_copy(const ds::WorkerTaskResult &src, WorkerTaskResultWrapper &
     copy_bytes(src.output_blob, dst.output_blob);
 }
 
-static void deep_copy(const ds::TaskList &src, TaskListWrapper &dst)
+static void deep_copy(const ds::TaskList& src, TaskListWrapper& dst)
 {
     if (src.batch_id)
         set_cstr(dst.batch_id, src.batch_id);
@@ -323,7 +303,7 @@ static void deep_copy(const ds::TaskList &src, TaskListWrapper &dst)
     // 拷贝内部序列（元素类型是 ds::Task）
     copy_seq<ds::TaskSeq, ds::Task>(src.tasks, dst.tasks);
 }
-static void deep_copy(const ds::WorkerResult &src, WorkerResultWrapper &dst)
+static void deep_copy(const ds::WorkerResult& src, WorkerResultWrapper& dst)
 {
     if (src.batch_id)
         set_cstr(dst.batch_id, src.batch_id);
@@ -334,138 +314,164 @@ static void deep_copy(const ds::WorkerResult &src, WorkerResultWrapper &dst)
     // 拷贝内部序列（元素类型是 ds::WorkerTaskResult）
     copy_seq<ds::WorkerTaskResultSeq, ds::WorkerTaskResult>(src.results, dst.results);
 }
+static void deep_copy(const DDS_SampleInfo& src, DDS_SampleInfo& dst) {
+    dst = src;
+}
+
 
 // ---- Writer deleters ----
-struct TaskDataWriterDeleter
-{
-    void operator()(ds::TaskDataWriter *) const {}
+struct TaskDataWriterDeleter {
+    void operator()(ds::TaskDataWriter*) const {}
 };
-struct ClaimDataWriterDeleter
-{
-    void operator()(ds::ClaimDataWriter *) const {}
+struct ClaimDataWriterDeleter {
+    void operator()(ds::ClaimDataWriter*) const {}
 };
-struct OpenBatchDataWriterDeleter
-{
-    void operator()(ds::OpenBatchDataWriter *) const {}
+struct OpenBatchDataWriterDeleter {
+    void operator()(ds::OpenBatchDataWriter*) const {}
 };
-struct GrantDataWriterDeleter
-{
-    void operator()(ds::GrantDataWriter *) const {}
+struct GrantDataWriterDeleter {
+    void operator()(ds::GrantDataWriter*) const {}
 };
-struct TaskListDataWriterDeleter
-{
-    void operator()(ds::TaskListDataWriter *) const {}
+struct TaskListDataWriterDeleter {
+    void operator()(ds::TaskListDataWriter*) const {}
 };
-struct WorkerTaskResultDataWriterDeleter
-{
-    void operator()(ds::WorkerTaskResultDataWriter *) const {}
+struct WorkerTaskResultDataWriterDeleter {
+    void operator()(ds::WorkerTaskResultDataWriter*) const {}
 };
-struct WorkerResultDataWriterDeleter
-{
-    void operator()(ds::WorkerResultDataWriter *) const {}
+struct WorkerResultDataWriterDeleter {
+    void operator()(ds::WorkerResultDataWriter*) const {}
 };
 
 // ---- Reader deleters ----
-struct TaskDataReaderDeleter
-{
-    void operator()(ds::TaskDataReader *) const {}
+struct TaskDataReaderDeleter {
+    void operator()(ds::TaskDataReader*) const {}
 };
-struct ClaimDataReaderDeleter
-{
-    void operator()(ds::ClaimDataReader *) const {}
+struct ClaimDataReaderDeleter {
+    void operator()(ds::ClaimDataReader*) const {}
 };
-struct OpenBatchDataReaderDeleter
-{
-    void operator()(ds::OpenBatchDataReader *) const {}
+struct OpenBatchDataReaderDeleter {
+    void operator()(ds::OpenBatchDataReader*) const {}
 };
-struct GrantDataReaderDeleter
-{
-    void operator()(ds::GrantDataReader *) const {}
+struct GrantDataReaderDeleter {
+    void operator()(ds::GrantDataReader*) const {}
 };
-struct TaskListDataReaderDeleter
-{
-    void operator()(ds::TaskListDataReader *) const {}
+struct TaskListDataReaderDeleter {
+    void operator()(ds::TaskListDataReader*) const {}
 };
-struct WorkerTaskResultDataReaderDeleter
-{
-    void operator()(ds::WorkerTaskResultDataReader *) const {}
+struct WorkerTaskResultDataReaderDeleter {
+    void operator()(ds::WorkerTaskResultDataReader*) const {}
 };
-struct WorkerResultDataReaderDeleter
-{
-    void operator()(ds::WorkerResultDataReader *) const {}
+struct WorkerResultDataReaderDeleter {
+    void operator()(ds::WorkerResultDataReader*) const {}
 };
+static void bind_dds_sampleinfo_and_constants(py::module_& m) {
+    py::class_<DDS_SampleInfo>(m, "SampleInfo")
+        .def_readonly("sample_state", &DDS_SampleInfo::sample_state)
+        .def_readonly("view_state", &DDS_SampleInfo::view_state)
+        .def_readonly("instance_state", &DDS_SampleInfo::instance_state)
+        .def_readonly("source_timestamp", &DDS_SampleInfo::source_timestamp)
+        .def_readonly("write_sequence_number", &DDS_SampleInfo::write_sequence_number)
+        .def_readonly("instance_handle", &DDS_SampleInfo::instance_handle)
+        .def_readonly("publication_handle", &DDS_SampleInfo::publication_handle)
+        .def_readonly("disposed_generation_count", &DDS_SampleInfo::disposed_generation_count)
+        .def_readonly("no_writers_generation_count", &DDS_SampleInfo::no_writers_generation_count)
+        .def_readonly("sample_rank", &DDS_SampleInfo::sample_rank)
+        .def_readonly("generation_rank", &DDS_SampleInfo::generation_rank)
+        .def_readonly("absolute_generation_rank", &DDS_SampleInfo::absolute_generation_rank)
+        .def_readonly("valid_data", &DDS_SampleInfo::valid_data)
+        .def_readonly("recive_locator", &DDS_SampleInfo::recive_locator)
+        .def_readonly("recive_order", &DDS_SampleInfo::recive_order)
+        .def_readonly("is_batch_end", &DDS_SampleInfo::is_batch_end);
 
+    bind_sequence_mapped<DDS_SampleInfoSeq, DDS_SampleInfo, DDS_SampleInfo>(m, "SampleInfoSeq");
+
+    m.attr("ANY_SAMPLE_STATE") = DDS::ANY_SAMPLE_STATE;
+    m.attr("READ_SAMPLE_STATE") = DDS::READ_SAMPLE_STATE;
+    m.attr("NOT_READ_SAMPLE_STATE") = DDS::NOT_READ_SAMPLE_STATE;
+
+    m.attr("ANY_VIEW_STATE") = DDS::ANY_VIEW_STATE;
+    m.attr("NEW_VIEW_STATE") = DDS::NEW_VIEW_STATE;
+    m.attr("NOT_NEW_VIEW_STATE") = DDS::NOT_NEW_VIEW_STATE;
+
+    m.attr("ANY_INSTANCE_STATE") = DDS::ANY_INSTANCE_STATE;
+    m.attr("ALIVE_INSTANCE_STATE") = DDS::ALIVE_INSTANCE_STATE;
+    m.attr("DISPOSED_INSTANCE_STATE") = DDS::NOT_ALIVE_DISPOSED_INSTANCE_STATE;
+    m.attr("NO_WRITERS_INSTANCE_STATE") = DDS::NOT_ALIVE_NO_WRITERS_INSTANCE_STATE;
+}
 // ========== DataWriter 绑定：write(wrapper) ==========
 template <typename DDSWriterT, typename MsgT, typename WrapperT, typename DeleterT>
-void bind_datawriter(py::module_ &m, const char *py_name)
+void bind_datawriter(py::module_& m, const char* py_name)
 {
+
     py::class_<DDSWriterT, DDS::DataWriter, std::unique_ptr<DDSWriterT, DeleterT>>(m, py_name)
-        .def("write", [](DDSWriterT &writer, const WrapperT &w)
-             {
+        .def("write", [](DDSWriterT& writer, const WrapperT& w) {
         const MsgT& msg = static_cast<const MsgT&>(w);
         return writer.write(msg, DDS::HANDLE_NIL_NATIVE); });
 }
 
-// ========== DataReader 绑定：read_list / take_list ==========
 template <typename DDSReaderT, typename MsgT, typename SeqT, typename WrapperT, typename DeleterT>
-void bind_datareader(py::module_ &m, const char *py_name)
+void bind_datareader(py::module_& m, const char* py_name)
 {
     py::class_<DDSReaderT, DDS::DataReader, std::unique_ptr<DDSReaderT, DeleterT>>(m, py_name)
-        .def("read_list", [](DDSReaderT &r, int max_samples = -1)
-             {
-                 SeqT dataSeq;
-                 DDS_SampleInfoSeq infoSeq;
-                 auto rc = r.read(dataSeq, infoSeq,
-                                  (DDS::Long)max_samples,
-                                  DDS::ANY_SAMPLE_STATE, DDS::ANY_VIEW_STATE, DDS::ANY_INSTANCE_STATE);
-                 py::list out;
-                 DDS_ULong n = dataSeq.length();
-                 for (DDS_ULong i = 0; i < n; ++i)
-                 {
-                     const MsgT &elem = dataSeq.get_at(i);
-                     auto w = new WrapperT();
-                     deep_copy(elem, *w);
-                     out.append(py::cast(w, py::return_value_policy::take_ownership));
-                 }
-                 r.return_loan(dataSeq, infoSeq);
-                 return out; // 仅返回数据列表，rc 如需也可一起返回
+        // 便捷读取（你原有的）
+        .def("read_list", [](DDSReaderT& r, int max_samples = -1) {
+        SeqT dataSeq;
+        DDS_SampleInfoSeq infoSeq;
+        auto rc = r.read(dataSeq, infoSeq,
+                         (DDS::Long)max_samples,
+                         DDS::ANY_SAMPLE_STATE, DDS::ANY_VIEW_STATE, DDS::ANY_INSTANCE_STATE);
+        py::list out;
+        DDS_ULong n = dataSeq.length();
+        for (DDS_ULong i = 0; i < n; ++i) {
+            const MsgT& elem = dataSeq.get_at(i);
+            auto w = new WrapperT();
+            deep_copy(elem, *w);
+            out.append(py::cast(w, py::return_value_policy::take_ownership));
+        }
+        r.return_loan(dataSeq, infoSeq);
+        return out;
              },
              py::arg("max_samples") = -1)
-        .def("take_list", [](DDSReaderT &r, int max_samples = -1)
-             {
-                 SeqT dataSeq; DDS_SampleInfoSeq infoSeq;
-                 auto rc = r.take(dataSeq, infoSeq,
-                                  (DDS::Long)max_samples,
-                                  DDS::ANY_SAMPLE_STATE, DDS::ANY_VIEW_STATE, DDS::ANY_INSTANCE_STATE);
-                 py::list out;
-                 DDS_ULong n = dataSeq.length();
-                 for (DDS_ULong i = 0; i < n; ++i) {
-                     const MsgT& elem = dataSeq.get_at(i);
-                     auto w = new WrapperT();
-                     deep_copy(elem, *w);
-                     out.append(py::cast(w, py::return_value_policy::take_ownership));
-                 }
-                 r.return_loan(dataSeq, infoSeq);
-                 return out; }, py::arg("max_samples") = -1);
+        .def("take", [](DDSReaderT& r,
+                        SeqT& dataSeq,
+                        DDS_SampleInfoSeq& infoSeq,
+                        py::object max_samples,
+                        py::object sampleState,
+                        py::object viewState,
+                        py::object instanceState) {
+                            DDS::Long max_samples_val = py::cast<DDS::Long>(max_samples);
+                            DDS::SampleStateMask sample_state =
+                                static_cast<DDS::SampleStateMask>(py::cast<DDS::ULong>(sampleState));
+                            DDS::ViewStateMask view_state =
+                                static_cast<DDS::ViewStateMask>(py::cast<DDS::ULong>(viewState));
+                            DDS::InstanceStateMask instance_state =
+                                static_cast<DDS::InstanceStateMask>(py::cast<DDS::ULong>(instanceState));
+                            return r.take(dataSeq, infoSeq, max_samples_val, sample_state, view_state, instance_state);
+             },
+             py::arg("dataSeq"),
+                 py::arg("infoSeq"),
+                 py::arg("max_samples") = LENGTH_UNLIMITED,
+                 py::arg("sampleState") = DDS::ANY_SAMPLE_STATE,
+                 py::arg("viewState") = DDS::ANY_VIEW_STATE,
+                 py::arg("instanceState") = DDS::ANY_INSTANCE_STATE)
+
+
+                 // ★ return_loan：配合上面的 take 使用
+                 .def("return_loan", [](DDSReaderT& r, SeqT& dataSeq, DDS_SampleInfoSeq& infoSeq) {
+                 return r.return_loan(dataSeq, infoSeq);
+                      });
 }
 
-void bind_infer(py::module &m)
+
+void bind_infer(py::module& m)
 {
     // --------- Task（TaskList 内会用到）---------
     py::class_<TaskWrapper>(m, "Task")
         .def(py::init<>())
-        .def_property("request_id", [](const TaskWrapper &self)
-                      { return get_cstr(self.request_id); }, [](TaskWrapper &self, const std::string &s)
-                      { set_cstr(self.request_id, s); })
-        .def_property("task_id", [](const TaskWrapper &self)
-                      { return get_cstr(self.task_id); }, [](TaskWrapper &self, const std::string &s)
-                      { set_cstr(self.task_id, s); })
-        .def_property("client_id", [](const TaskWrapper &self)
-                      { return get_cstr(self.client_id); }, [](TaskWrapper &self, const std::string &s)
-                      { set_cstr(self.client_id, s); })
-        .def_property("payload", [](const TaskWrapper &self)
-                      { return bytes_to_py(self.payload); }, [](TaskWrapper &self, const py::bytes &b)
-                      { py_to_bytes(b, self.payload); });
+        .def_property("request_id", [](const TaskWrapper& self) { return get_cstr(self.request_id); }, [](TaskWrapper& self, const std::string& s) { set_cstr(self.request_id, s); })
+        .def_property("task_id", [](const TaskWrapper& self) { return get_cstr(self.task_id); }, [](TaskWrapper& self, const std::string& s) { set_cstr(self.task_id, s); })
+        .def_property("client_id", [](const TaskWrapper& self) { return get_cstr(self.client_id); }, [](TaskWrapper& self, const std::string& s) { set_cstr(self.client_id, s); })
+        .def_property("payload", [](const TaskWrapper& self) { return bytes_to_py(self.payload); }, [](TaskWrapper& self, const py::bytes& b) { py_to_bytes(b, self.payload); });
 
     // 对应 C++ 的 ds::TaskSeq
     bind_sequence_mapped<ds::TaskSeq, ds::Task, TaskWrapper>(m, "TaskSeq");
@@ -473,24 +479,16 @@ void bind_infer(py::module &m)
     // --------- Claim ---------
     py::class_<ClaimWrapper>(m, "Claim")
         .def(py::init<>())
-        .def_property("batch_id", [](const ClaimWrapper &self)
-                      { return get_cstr(self.batch_id); }, [](ClaimWrapper &self, const std::string &s)
-                      { set_cstr(self.batch_id, s); })
-        .def_property("worker_id", [](const ClaimWrapper &self)
-                      { return get_cstr(self.worker_id); }, [](ClaimWrapper &self, const std::string &s)
-                      { set_cstr(self.worker_id, s); })
+        .def_property("batch_id", [](const ClaimWrapper& self) { return get_cstr(self.batch_id); }, [](ClaimWrapper& self, const std::string& s) { set_cstr(self.batch_id, s); })
+        .def_property("worker_id", [](const ClaimWrapper& self) { return get_cstr(self.worker_id); }, [](ClaimWrapper& self, const std::string& s) { set_cstr(self.worker_id, s); })
         .def_readwrite("queue_length", &ClaimWrapper::queue_length);
     bind_sequence_mapped<ds::ClaimSeq, ds::Claim, ClaimWrapper>(m, "ClaimSeq");
 
     // --------- OpenBatch ---------
     py::class_<OpenBatchWrapper>(m, "OpenBatch")
         .def(py::init<>())
-        .def_property("batch_id", [](const OpenBatchWrapper &self)
-                      { return get_cstr(self.batch_id); }, [](OpenBatchWrapper &self, const std::string &s)
-                      { set_cstr(self.batch_id, s); })
-        .def_property("model_id", [](const OpenBatchWrapper &self)
-                      { return get_cstr(self.model_id); }, [](OpenBatchWrapper &self, const std::string &s)
-                      { set_cstr(self.model_id, s); })
+        .def_property("batch_id", [](const OpenBatchWrapper& self) { return get_cstr(self.batch_id); }, [](OpenBatchWrapper& self, const std::string& s) { set_cstr(self.batch_id, s); })
+        .def_property("model_id", [](const OpenBatchWrapper& self) { return get_cstr(self.model_id); }, [](OpenBatchWrapper& self, const std::string& s) { set_cstr(self.model_id, s); })
         .def_readwrite("size", &OpenBatchWrapper::size)
         .def_readwrite("create_ts_ms", &OpenBatchWrapper::create_ts_ms);
     bind_sequence_mapped<ds::OpenBatchSeq, ds::OpenBatch, OpenBatchWrapper>(m, "OpenBatchSeq");
@@ -498,98 +496,68 @@ void bind_infer(py::module &m)
     // --------- Grant ---------
     py::class_<GrantWrapper>(m, "Grant")
         .def(py::init<>())
-        .def_property("batch_id", [](const GrantWrapper &self)
-                      { return get_cstr(self.batch_id); }, [](GrantWrapper &self, const std::string &s)
-                      { set_cstr(self.batch_id, s); })
-        .def_property("winner_worker_id", [](const GrantWrapper &self)
-                      { return get_cstr(self.winner_worker_id); }, [](GrantWrapper &self, const std::string &s)
-                      { set_cstr(self.winner_worker_id, s); });
+        .def_property("batch_id", [](const GrantWrapper& self) { return get_cstr(self.batch_id); }, [](GrantWrapper& self, const std::string& s) { set_cstr(self.batch_id, s); })
+        .def_property("winner_worker_id", [](const GrantWrapper& self) { return get_cstr(self.winner_worker_id); }, [](GrantWrapper& self, const std::string& s) { set_cstr(self.winner_worker_id, s); });
     bind_sequence_mapped<ds::GrantSeq, ds::Grant, GrantWrapper>(m, "GrantSeq");
 
     // --------- WorkerTaskResult（WorkerResult.results 用）---------
     py::class_<WorkerTaskResultWrapper>(m, "WorkerTaskResult")
         .def(py::init<>())
-        .def_property("request_id", [](const WorkerTaskResultWrapper &self)
-                      { return get_cstr(self.request_id); }, [](WorkerTaskResultWrapper &self, const std::string &s)
-                      { set_cstr(self.request_id, s); })
-        .def_property("task_id", [](const WorkerTaskResultWrapper &self)
-                      { return get_cstr(self.task_id); }, [](WorkerTaskResultWrapper &self, const std::string &s)
-                      { set_cstr(self.task_id, s); })
-        .def_property("client_id", [](const WorkerTaskResultWrapper &self)
-                      { return get_cstr(self.client_id); }, [](WorkerTaskResultWrapper &self, const std::string &s)
-                      { set_cstr(self.client_id, s); })
-        .def_property("status", [](const WorkerTaskResultWrapper &self)
-                      { return get_cstr(self.status); }, [](WorkerTaskResultWrapper &self, const std::string &s)
-                      { set_cstr(self.status, s); })
-        .def_property("output_blob", [](const WorkerTaskResultWrapper &self)
-                      { return bytes_to_py(self.output_blob); }, [](WorkerTaskResultWrapper &self, const py::bytes &b)
-                      { py_to_bytes(b, self.output_blob); });
+        .def_property("request_id", [](const WorkerTaskResultWrapper& self) { return get_cstr(self.request_id); }, [](WorkerTaskResultWrapper& self, const std::string& s) { set_cstr(self.request_id, s); })
+        .def_property("task_id", [](const WorkerTaskResultWrapper& self) { return get_cstr(self.task_id); }, [](WorkerTaskResultWrapper& self, const std::string& s) { set_cstr(self.task_id, s); })
+        .def_property("client_id", [](const WorkerTaskResultWrapper& self) { return get_cstr(self.client_id); }, [](WorkerTaskResultWrapper& self, const std::string& s) { set_cstr(self.client_id, s); })
+        .def_property("status", [](const WorkerTaskResultWrapper& self) { return get_cstr(self.status); }, [](WorkerTaskResultWrapper& self, const std::string& s) { set_cstr(self.status, s); })
+        .def_property("output_blob", [](const WorkerTaskResultWrapper& self) { return bytes_to_py(self.output_blob); }, [](WorkerTaskResultWrapper& self, const py::bytes& b) { py_to_bytes(b, self.output_blob); });
     bind_sequence_mapped<ds::WorkerTaskResultSeq, ds::WorkerTaskResult, WorkerTaskResultWrapper>(m, "WorkerTaskResultSeq");
 
     // --------- TaskList ---------
     py::class_<TaskListWrapper>(m, "TaskList")
         .def(py::init<>())
-        .def_property("batch_id", [](const TaskListWrapper &self)
-                      { return get_cstr(self.batch_id); }, [](TaskListWrapper &self, const std::string &s)
-                      { set_cstr(self.batch_id, s); })
-        .def_property("model_id", [](const TaskListWrapper &self)
-                      { return get_cstr(self.model_id); }, [](TaskListWrapper &self, const std::string &s)
-                      { set_cstr(self.model_id, s); })
-        .def_property("assigned_worker_id", [](const TaskListWrapper &self)
-                      { return get_cstr(self.assigned_worker_id); }, [](TaskListWrapper &self, const std::string &s)
-                      { set_cstr(self.assigned_worker_id, s); })
+        .def_property("batch_id", [](const TaskListWrapper& self) { return get_cstr(self.batch_id); }, [](TaskListWrapper& self, const std::string& s) { set_cstr(self.batch_id, s); })
+        .def_property("model_id", [](const TaskListWrapper& self) { return get_cstr(self.model_id); }, [](TaskListWrapper& self, const std::string& s) { set_cstr(self.model_id, s); })
+        .def_property("assigned_worker_id", [](const TaskListWrapper& self) { return get_cstr(self.assigned_worker_id); }, [](TaskListWrapper& self, const std::string& s) { set_cstr(self.assigned_worker_id, s); })
         // 友好版：把内部 TaskSeq 映射为 Python list[Task]
-        .def_property("tasks", [](TaskListWrapper &self)
-                      {
-                          py::list result;
-                          DDS_ULong len = self.tasks.length();
-                          for (DDS_ULong i = 0; i < len; ++i) {
-                              const ds::Task& elem = self.tasks.get_at(i);
-                              auto wrapper = new TaskWrapper();
-                              deep_copy(elem, *wrapper);
-                              result.append(py::cast(wrapper, py::return_value_policy::take_ownership));
-                          }
-                          return result; }, [](TaskListWrapper &self, const py::list &list)
-                      {
-                          DDS_ULong len = static_cast<DDS_ULong>(list.size());
-                          self.tasks.ensure_length(len, len);
-                          for (DDS_ULong i = 0; i < len; ++i) {
-                              const TaskWrapper& w = list[i].cast<const TaskWrapper&>();
-                              self.tasks.set_at(i, static_cast<const ds::Task&>(w));
-                          } });
+        .def_property("tasks", [](TaskListWrapper& self) {
+        py::list result;
+        DDS_ULong len = self.tasks.length();
+        for (DDS_ULong i = 0; i < len; ++i) {
+            const ds::Task& elem = self.tasks.get_at(i);
+            auto wrapper = new TaskWrapper();
+            deep_copy(elem, *wrapper);
+            result.append(py::cast(wrapper, py::return_value_policy::take_ownership));
+        }
+        return result; }, [](TaskListWrapper& self, const py::list& list) {
+            DDS_ULong len = static_cast<DDS_ULong>(list.size());
+            self.tasks.ensure_length(len, len);
+            for (DDS_ULong i = 0; i < len; ++i) {
+                const TaskWrapper& w = list[i].cast<const TaskWrapper&>();
+                self.tasks.set_at(i, static_cast<const ds::Task&>(w));
+            } });
     bind_sequence_mapped<ds::TaskListSeq, ds::TaskList, TaskListWrapper>(m, "TaskListSeq");
 
     // --------- Worker（WorkerResult）---------
     py::class_<WorkerResultWrapper>(m, "WorkerResult")
         .def(py::init<>())
-        .def_property("batch_id", [](const WorkerResultWrapper &self)
-                      { return get_cstr(self.batch_id); }, [](WorkerResultWrapper &self, const std::string &s)
-                      { set_cstr(self.batch_id, s); })
-        .def_property("model_id", [](const WorkerResultWrapper &self)
-                      { return get_cstr(self.model_id); }, [](WorkerResultWrapper &self, const std::string &s)
-                      { set_cstr(self.model_id, s); })
-        .def_property("worker_id", [](const WorkerResultWrapper &self)
-                      { return get_cstr(self.worker_id); }, [](WorkerResultWrapper &self, const std::string &s)
-                      { set_cstr(self.worker_id, s); })
+        .def_property("batch_id", [](const WorkerResultWrapper& self) { return get_cstr(self.batch_id); }, [](WorkerResultWrapper& self, const std::string& s) { set_cstr(self.batch_id, s); })
+        .def_property("model_id", [](const WorkerResultWrapper& self) { return get_cstr(self.model_id); }, [](WorkerResultWrapper& self, const std::string& s) { set_cstr(self.model_id, s); })
+        .def_property("worker_id", [](const WorkerResultWrapper& self) { return get_cstr(self.worker_id); }, [](WorkerResultWrapper& self, const std::string& s) { set_cstr(self.worker_id, s); })
         // 友好版：内部 WorkerTaskResultSeq 映射为 Python list[WorkerTaskResult]
-        .def_property("results", [](WorkerResultWrapper &self)
-                      {
-                          py::list result;
-                          DDS_ULong len = self.results.length();
-                          for (DDS_ULong i = 0; i < len; ++i) {
-                              const ds::WorkerTaskResult& elem = self.results.get_at(i);
-                              auto wrapper = new WorkerTaskResultWrapper();
-                              deep_copy(elem, *wrapper);
-                              result.append(py::cast(wrapper, py::return_value_policy::take_ownership));
-                          }
-                          return result; }, [](WorkerResultWrapper &self, const py::list &list)
-                      {
-                          DDS_ULong len = static_cast<DDS_ULong>(list.size());
-                          self.results.ensure_length(len, len);
-                          for (DDS_ULong i = 0; i < len; ++i) {
-                              const WorkerTaskResultWrapper& w = list[i].cast<const WorkerTaskResultWrapper&>();
-                              self.results.set_at(i, static_cast<const ds::WorkerTaskResult&>(w));
-                          } });
+        .def_property("results", [](WorkerResultWrapper& self) {
+        py::list result;
+        DDS_ULong len = self.results.length();
+        for (DDS_ULong i = 0; i < len; ++i) {
+            const ds::WorkerTaskResult& elem = self.results.get_at(i);
+            auto wrapper = new WorkerTaskResultWrapper();
+            deep_copy(elem, *wrapper);
+            result.append(py::cast(wrapper, py::return_value_policy::take_ownership));
+        }
+        return result; }, [](WorkerResultWrapper& self, const py::list& list) {
+            DDS_ULong len = static_cast<DDS_ULong>(list.size());
+            self.results.ensure_length(len, len);
+            for (DDS_ULong i = 0; i < len; ++i) {
+                const WorkerTaskResultWrapper& w = list[i].cast<const WorkerTaskResultWrapper&>();
+                self.results.set_at(i, static_cast<const ds::WorkerTaskResult&>(w));
+            } });
     bind_sequence_mapped<ds::WorkerResultSeq, ds::WorkerResult, WorkerResultWrapper>(m, "WorkerResultSeq");
 
     // --------- Writers ---------
