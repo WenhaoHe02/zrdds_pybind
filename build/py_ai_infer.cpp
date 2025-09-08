@@ -7,11 +7,11 @@
 #include <string>
 #include <memory>
 
-#include "ai_infer.h" // 生成头，类型都在 namespace data_structure 里
-#include "ai_inferDataReader.h"
-#include "ai_inferDataWriter.h"
+#include "../datastruct_cpp/ai_infer.h" // 生成头，类型都在 namespace data_structure 里
+#include "../datastruct_cpp/ai_inferDataReader.h"
+#include "../datastruct_cpp/ai_inferDataWriter.h"
 
-#include "ai_infer.h"
+#include "../datastruct_cpp/ai_infer.h"
 
 namespace py = pybind11;
 namespace ds = data_structure;

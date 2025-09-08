@@ -561,12 +561,12 @@ void ClientUpdateDestroySample(ZRMemPool* pool, ClientUpdate* sample)
 
 DDS_ULong ClientUpdateGetSerializedSampleMaxSize()
 {
-    return 275;
+    return MAX_UINT32_VALUE;
 }
 
 DDS_ULong ClientUpdateGetSerializedKeyMaxSize()
 {
-    return 275;
+    return MAX_UINT32_VALUE;
 }
 
 DDS_Long ClientUpdateGetKeyHash(
@@ -770,7 +770,7 @@ DDS::TypeCode* ClientUpdateGetTypeCode()
     memberTc = factory.getPrimitiveTC(DDS_TK_UCHAR);
     if (memberTc != NULL)
     {
-        memberTc = factory.createSequenceTC(255, memberTc);
+        memberTc = factory.createSequenceTC(MAX_UINT32_VALUE, memberTc);
     }
     if (memberTc == NULL)
     {
@@ -1169,12 +1169,12 @@ void ModelBlobDestroySample(ZRMemPool* pool, ModelBlob* sample)
 
 DDS_ULong ModelBlobGetSerializedSampleMaxSize()
 {
-    return 263;
+    return MAX_UINT32_VALUE;
 }
 
 DDS_ULong ModelBlobGetSerializedKeyMaxSize()
 {
-    return 263;
+    return MAX_UINT32_VALUE;
 }
 
 DDS_Long ModelBlobGetKeyHash(
@@ -1322,7 +1322,7 @@ DDS::TypeCode* ModelBlobGetTypeCode()
     memberTc = factory.getPrimitiveTC(DDS_TK_UCHAR);
     if (memberTc != NULL)
     {
-        memberTc = factory.createSequenceTC(255, memberTc);
+        memberTc = factory.createSequenceTC(MAX_UINT32_VALUE, memberTc);
     }
     if (memberTc == NULL)
     {

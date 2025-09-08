@@ -1,15 +1,16 @@
 #ifndef ai_trainTypeSupport_h__
 #define ai_trainTypeSupport_h__
 /*************************************************************/
-/*           ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½É±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½                */
+/*           ´ËÎÄ¼þÓÉ±àÒëÆ÷Éú³É£¬ÇëÎðËæÒâÐÞ¸Ä                */
 /*************************************************************/
 
 #include "ZRDDSTypeSupport.h"
 
 namespace ai_train
 {
-    DDSTypeSupport(TrainCmdTypeSupport, TrainCmd);
-    DDSTypeSupport(ClientUpdateTypeSupport, ClientUpdate);
-    DDSTypeSupport(ModelBlobTypeSupport, ModelBlob);
+DDSTypeSupport(TrainCmdTypeSupport, TrainCmd);
+DDSTypeSupport(ClientUpdateTypeSupport, ClientUpdate);
+DDSTypeSupport(ModelBlobTypeSupport, ModelBlob);
 }
 #endif
+
