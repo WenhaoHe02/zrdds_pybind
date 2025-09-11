@@ -348,8 +348,6 @@ static void bind_dds_sampleinfo_and_constants(py::module& m) {
         .def_readonly("recive_order", &DDS_SampleInfo::recive_order)
         .def_readonly("is_batch_end", &DDS_SampleInfo::is_batch_end);
 
-    bind_sequence_mapped<DDS_SampleInfoSeq, DDS_SampleInfo, DDS_SampleInfo>(m, "SampleInfoSeq");
-
     m.attr("ANY_SAMPLE_STATE") = DDS::ANY_SAMPLE_STATE;
     m.attr("READ_SAMPLE_STATE") = DDS::READ_SAMPLE_STATE;
     m.attr("NOT_READ_SAMPLE_STATE") = DDS::NOT_READ_SAMPLE_STATE;
@@ -428,7 +426,6 @@ void bind_datareader(py::module& m, const char* py_name) {
 // -------------------- bind_infer --------------------
 void bind_infer(py::module& m) {
     // 可选：暴露 SampleInfo 及常量
-    bind_dds_sampleinfo_and_constants(m);
 
     // --------- Task（TaskList 内会用到）---------
     py::class_<TaskWrapper>(m, "Task")
