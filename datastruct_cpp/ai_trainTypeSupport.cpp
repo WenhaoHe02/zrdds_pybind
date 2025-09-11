@@ -1,5 +1,5 @@
 /*************************************************************/
-/*           ´ËÎÄ¼þÓÉ±àÒëÆ÷Éú³É£¬ÇëÎðËæÒâÐÞ¸Ä                */
+/*           ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½É±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½                */
 /*************************************************************/
 #include <stdlib.h>
 #include "ZRDDSTypePlugin.h"
@@ -9,18 +9,17 @@
 #include "ai_trainDataWriter.h"
 #include "ZRDDSTypeSupport.cpp"
 
-namespace ai_train
-{
+namespace ai_train {
 
-const DDS_Char* TrainCmd_TYPENAME = "TrainCmd";
-DDSTypeSupportImpl(TrainCmdTypeSupport, TrainCmd, TrainCmd_TYPENAME);
-
-
-const DDS_Char* ClientUpdate_TYPENAME = "ClientUpdate";
-DDSTypeSupportImpl(ClientUpdateTypeSupport, ClientUpdate, ClientUpdate_TYPENAME);
+    const DDS_Char* TrainCmd_TYPENAME = "TrainCmd";
+    DDSTypeSupportImpl(TrainCmdTypeSupport, TrainCmd, TrainCmd_TYPENAME);
 
 
-const DDS_Char* ModelBlob_TYPENAME = "ModelBlob";
-DDSTypeSupportImpl(ModelBlobTypeSupport, ModelBlob, ModelBlob_TYPENAME);
+    const DDS_Char* ClientUpdate_TYPENAME = "ClientUpdate";
+    DDSTypeSupportImpl(ClientUpdateTypeSupport, ClientUpdate, ClientUpdate_TYPENAME);
+
+
+    const DDS_Char* ModelBlob_TYPENAME = "ModelBlob";
+    DDSTypeSupportImpl(ModelBlobTypeSupport, ModelBlob, ModelBlob_TYPENAME);
 
 }

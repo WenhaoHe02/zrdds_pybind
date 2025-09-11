@@ -1,22 +1,21 @@
 #ifndef ai_trainDataWriter_h__
 #define ai_trainDataWriter_h__
 /*************************************************************/
-/*           ´ËÎÄ¼þÓÉ±àÒëÆ÷Éú³É£¬ÇëÎðËæÒâÐÞ¸Ä                */
+/*           ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½É±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½                */
 /*************************************************************/
 
 #include "ai_train.h"
 #include "ZRDDSDataWriter.h"
 
-namespace ai_train
-{
+namespace ai_train {
 
-typedef DDS::ZRDDSDataWriter<TrainCmd> TrainCmdDataWriter;
-
-
-typedef DDS::ZRDDSDataWriter<ClientUpdate> ClientUpdateDataWriter;
+    typedef DDS::ZRDDSDataWriter<TrainCmd> TrainCmdDataWriter;
 
 
-typedef DDS::ZRDDSDataWriter<ModelBlob> ModelBlobDataWriter;
+    typedef DDS::ZRDDSDataWriter<ClientUpdate> ClientUpdateDataWriter;
+
+
+    typedef DDS::ZRDDSDataWriter<ModelBlob> ModelBlobDataWriter;
 
 }
 #endif

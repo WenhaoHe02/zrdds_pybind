@@ -4293,6 +4293,8 @@ namespace data_structure {
             return false;
         }
 
+        DDS_StringSeq_initialize_ex(&self->texts, pool, allocateMemory);
+
         if (allocateMemory) {
         } else {
             if (self->request_id != NULL) {
@@ -4317,6 +4319,7 @@ namespace data_structure {
         DDS_Boolean deletePointers)
     {
         data_structure::BytesFinalizeEx(&self->output_blob, pool, deletePointers);
+        DDS_StringSeq_finalize(&self->texts);
         if (deletePointers) {
         }
     }
@@ -4414,6 +4417,10 @@ namespace data_structure {
             printf("copy member output_blob failed.");
             return false;
         }
+        if (!DDS_StringSeq_copy(&dst->texts, &src->texts)) {
+            printf("copy member texts failed.");
+            return false;
+        }
         return true;
     }
 
@@ -4452,6 +4459,17 @@ namespace data_structure {
         printf("\n");
 
         data_structure::BytesPrintData(&sample->output_blob);
+        printf("\n");
+
+        DDS_ULong textsTmpLen = DDS_StringSeq_get_length(&sample->texts);
+        printf("sample->texts: %d\n", textsTmpLen);
+        for (DDS_ULong i = 0; i < textsTmpLen; ++i) {
+            if (*DDS_StringSeq_get_reference(&sample->texts, i) != NULL) {
+                printf("sample->texts[%u](%d): %s\n", i, strlen(*DDS_StringSeq_get_reference(&sample->texts, i)), *DDS_StringSeq_get_reference(&sample->texts, i));
+            } else {
+                printf("sample->texts[%u](0): NULL\n", i);
+            }
+        }
         printf("\n");
 
     }
@@ -4577,6 +4595,30 @@ namespace data_structure {
             return NULL;
         }
 
+        memberTc = factory.createStringTC(MAX_UINT32_VALUE);
+        if (memberTc != NULL) {
+            memberTc = factory.createSequenceTC(MAX_UINT32_VALUE, memberTc);
+        }
+        if (memberTc == NULL) {
+            printf("Get Member texts TypeCode failed.");
+            factory.deleteTC(s_typeCode);
+            s_typeCode = NULL;
+            return NULL;
+        }
+        ret = s_typeCode->addMemberToStruct(
+            5,
+            5,
+            "texts",
+            memberTc,
+            false,
+            false);
+        factory.deleteTC(memberTc);
+        if (ret < 0) {
+            factory.deleteTC(s_typeCode);
+            s_typeCode = NULL;
+            return NULL;
+        }
+
         return s_typeCode;
     }
 
@@ -4607,6 +4649,23 @@ namespace data_structure {
             return -2;
         }
 
+        if (!CDRSerializerPutUntype(cdr, (DDS_Octet*)&(sample->texts)._length, 4)) {
+            printf("serialize length of sample->texts failed.");
+            return -2;
+        }
+#ifdef _ZRDDS_INCLUDE_NO_SERIALIZE_MODE
+        if (!CDRSerializerNoSerializingMode(cdr)) {
+#endif/*_ZRDDS_INCLUDE_NO_SERIALIZE_MODE*/
+            for (DDS_ULong i = 0; i < (sample->texts)._length; ++i) {
+                if (!CDRSerializerPutString(cdr, (DDS_Char*)*DDS_StringSeq_get_reference(&sample->texts, i), *DDS_StringSeq_get_reference(&sample->texts, i) == NULL ? 0 : strlen(*DDS_StringSeq_get_reference(&sample->texts, i)) + 1)) {
+                    printf("serialize sample->texts failed.");
+                    return -2;
+                }
+            }
+#ifdef _ZRDDS_INCLUDE_NO_SERIALIZE_MODE
+        }
+#endif/*_ZRDDS_INCLUDE_NO_SERIALIZE_MODE*/
+
         return 0;
     }
 
@@ -4626,6 +4685,7 @@ namespace data_structure {
                 printf("Initialize member sample->output_blob failed.");
                 return -2;
             }
+            DDS_StringSeq_initialize_ex(&sample->texts, pool, true);
             return 0;
         }
         if (0 == request_idTmpLen) {
@@ -4662,6 +4722,7 @@ namespace data_structure {
                 printf("Initialize member sample->output_blob failed.");
                 return -2;
             }
+            DDS_StringSeq_initialize_ex(&sample->texts, pool, true);
             return 0;
         }
         if (0 == task_idTmpLen) {
@@ -4697,6 +4758,7 @@ namespace data_structure {
                 printf("Initialize member sample->output_blob failed.");
                 return -2;
             }
+            DDS_StringSeq_initialize_ex(&sample->texts, pool, true);
             return 0;
         }
         if (0 == client_idTmpLen) {
@@ -4731,6 +4793,7 @@ namespace data_structure {
                 printf("Initialize member sample->output_blob failed.");
                 return -2;
             }
+            DDS_StringSeq_initialize_ex(&sample->texts, pool, true);
             return 0;
         }
         if (0 == statusTmpLen) {
@@ -4763,8 +4826,36 @@ namespace data_structure {
                 printf("Initialize member sample->output_blob failed.");
                 return -2;
             }
+            DDS_StringSeq_initialize_ex(&sample->texts, pool, true);
             return 0;
         }
+        DDS_ULong textsTmpLen = 0;
+        if (!CDRDeserializerGetUntype(cdr, (DDS_Octet*)&textsTmpLen, 4)) {
+            DDS_StringSeq_initialize_ex(&sample->texts, pool, true);
+            return 0;
+        }
+        if (!DDS_StringSeq_ensure_length(&sample->texts, textsTmpLen, textsTmpLen)) {
+            printf("Set maxiumum member sample->texts failed.");
+            return -3;
+        }
+        for (DDS_ULong i = 0; i < (sample->texts).length(); ++i) {
+            DDS_ULong tmpLength = 0;
+            if (!CDRDeserializerGetUntype(cdr, (DDS_Octet*)&tmpLength, 4)) {
+                printf("deserializer string length failed.");
+                return -3;
+            }
+            DDS_Octet* tmpValue = (DDS_Octet*)ZRMalloc(pool, tmpLength);
+            if (!CDRDeserializerGetUntypeArray(cdr, tmpValue, tmpLength, 1)) {
+                printf("deserializer string failed.");
+                return -3;
+            }
+            if (!DDS_StringSeq_set(&sample->texts, i, (const DDS_Char**)&tmpValue)) {
+                printf("deserializer string failed.");
+                return -3;
+            }
+            ZRDealloc(pool, tmpValue);
+        }
+
         return 0;
     }
 
@@ -4781,6 +4872,14 @@ namespace data_structure {
         currentAlignment += CDRSerializerGetStringSize(sample->status == NULL ? 0 : strlen(sample->status) + 1, currentAlignment);
 
         currentAlignment += data_structure::BytesGetSerializedSampleSize(&sample->output_blob, currentAlignment);
+
+        currentAlignment += CDRSerializerGetUntypeSize(4, currentAlignment);
+        DDS_ULong textsLen = DDS_StringSeq_get_length(&sample->texts);
+        if (textsLen != 0) {
+            for (DDS_ULong i = 0; i < textsLen; ++i) {
+                currentAlignment += CDRSerializerGetStringSize(strlen(sample->texts[i]) + 1, currentAlignment);
+            }
+        }
 
         return currentAlignment - initialAlignment;
     }

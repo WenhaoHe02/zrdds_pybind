@@ -1,25 +1,24 @@
 #ifndef ai_inferTypeSupport_h__
 #define ai_inferTypeSupport_h__
 /*************************************************************/
-/*           ´ËÎÄ¼þÓÉ±àÒëÆ÷Éú³É£¬ÇëÎðËæÒâÐÞ¸Ä                */
+/*           ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½É±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½                */
 /*************************************************************/
 
 #include "ZRDDSTypeSupport.h"
 
-namespace data_structure
-{
-DDSTypeSupport(BytesTypeSupport, Bytes);
-DDSTypeSupport(SingleTaskTypeSupport, SingleTask);
-DDSTypeSupport(InferenceRequestTypeSupport, InferenceRequest);
-DDSTypeSupport(TaskTypeSupport, Task);
-DDSTypeSupport(OpenBatchTypeSupport, OpenBatch);
-DDSTypeSupport(ClaimTypeSupport, Claim);
-DDSTypeSupport(GrantTypeSupport, Grant);
-DDSTypeSupport(TaskListTypeSupport, TaskList);
-DDSTypeSupport(WorkerTaskResultTypeSupport, WorkerTaskResult);
-DDSTypeSupport(WorkerResultTypeSupport, WorkerResult);
-DDSTypeSupport(ResultItemTypeSupport, ResultItem);
-DDSTypeSupport(ResultUpdateTypeSupport, ResultUpdate);
+namespace data_structure {
+    DDSTypeSupport(BytesTypeSupport, Bytes);
+    DDSTypeSupport(SingleTaskTypeSupport, SingleTask);
+    DDSTypeSupport(InferenceRequestTypeSupport, InferenceRequest);
+    DDSTypeSupport(TaskTypeSupport, Task);
+    DDSTypeSupport(OpenBatchTypeSupport, OpenBatch);
+    DDSTypeSupport(ClaimTypeSupport, Claim);
+    DDSTypeSupport(GrantTypeSupport, Grant);
+    DDSTypeSupport(TaskListTypeSupport, TaskList);
+    DDSTypeSupport(WorkerTaskResultTypeSupport, WorkerTaskResult);
+    DDSTypeSupport(WorkerResultTypeSupport, WorkerResult);
+    DDSTypeSupport(ResultItemTypeSupport, ResultItem);
+    DDSTypeSupport(ResultUpdateTypeSupport, ResultUpdate);
 }
 #endif
 

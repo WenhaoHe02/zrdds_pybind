@@ -958,6 +958,7 @@ namespace data_structure {
         DDS_Char* client_id; // @ID(2) /* unbounded string */ 
         DDS_Char* status; // @ID(3) /* unbounded string */ 
         data_structure::Bytes output_blob; // @ID(4)
+        DDS_StringSeq texts; // @ID(5) /* unbounded sequence */ 
     } WorkerTaskResult; // @Extensibility(EXTENSIBLE)
 
     DDS_USER_SEQUENCE_CPP(WorkerTaskResultSeq, WorkerTaskResult);
