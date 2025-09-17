@@ -29,9 +29,6 @@ void bind_core(py::module &m)
 {
     m.doc() = "Python bindings for DDS Subscriber and related classes";
 
-    // --------------------------
-    // 基本类型绑定（保留你已有的绑定）
-    // --------------------------
     py::class_<DDS::StatusCondition>(m, "StatusCondition");
     py::class_<DDS::StatusKindMask>(m, "StatusKindMask")
         .def(py::init<>());
@@ -125,7 +122,6 @@ void bind_core(py::module &m)
     py::class_<DDS::Topic, DDS::Entity, std::unique_ptr<DDS::Topic, py::nodelete>>(m, "Topic");
 
     // 绑定默认 QoS 常量：全部导出为 -1（Python sentinel）
-    // 你可以根据需要仅导出部分，但这里一并导出常见的 default 常量为 -1
     m.attr("DOMAINPARTICIPANT_QOS_DEFAULT") = py::int_(-1);
     m.attr("DOMAINPARTICIPANT_FACTORY_QOS_DEFAULT") = py::int_(-1);
     m.attr("PUBLISHER_QOS_DEFAULT") = py::int_(-1);
@@ -342,7 +338,4 @@ void bind_core(py::module &m)
         .def("get_qos", [](DDS::DomainParticipantFactory &self, DDS_DomainParticipantFactoryQos &qoslist)
              { return self.get_qos(qoslist); }, "获取DomainParticipantFactory的QoS设置", py::arg("qoslist"));
 
-    // --------------------------
-    // 结束模块s
-    // --------------------------
 }

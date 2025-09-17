@@ -7,7 +7,7 @@
 #include <string>
 #include <memory>
 
-#include "../datastruct_cpp/ai_infer.h"            // 生成头，类型都在 namespace data_structure 里
+#include "../datastruct_cpp/ai_infer.h"            
 #include "../datastruct_cpp/ai_inferDataReader.h"
 #include "../datastruct_cpp/ai_inferDataWriter.h"
 #include <WaitSet.h>

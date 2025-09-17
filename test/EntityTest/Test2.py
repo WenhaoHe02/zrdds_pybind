@@ -35,10 +35,10 @@ def main():
 
     register_all_types(participant)
 
-    # 5. 创建 Topic（只测试 API，不需要写数据）
+    # 5. 创建 Topic
     topic = participant.create_topic(
         "TrainTopic",
-        "TrainCmd",  # 随便一个类型名（因为你不测试 write）
+        "TrainCmd",  
         Project1.TOPIC_QOS_DEFAULT,
         None,
         0

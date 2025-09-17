@@ -163,7 +163,6 @@ public:
         std::cerr << "[C++] trampoline:on_data_available exit" << std::endl;
     }
 
-    // 如果你在 C++ 有实现 on_data_arrived 这类“预解码”回调，也一并覆盖
     void on_data_arrived(DDS::DataReader* reader, void* sample, const DDS::SampleInfo& info) override
     {
         py::gil_scoped_acquire gil;

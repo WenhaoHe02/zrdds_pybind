@@ -50,7 +50,7 @@ def test_base_listener():
     composite.on_requested_deadline_missed(mock_reader, mock_status)
     print(composite)
 
-    # 测试调试监听器（需绑定支持）
+    # 测试调试监听器
     if hasattr(DebugListener, 'on_all'):
         debug = DebugListener("DebugDemo")
         print("\n--- 测试调试监听器 ---")

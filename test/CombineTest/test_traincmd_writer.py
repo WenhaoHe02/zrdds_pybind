@@ -14,9 +14,7 @@ participant = factory.create_participant(
 publisher = participant.create_publisher(-1, None, 0)
 
 # 3. 注册类型 & 创建 Topic
-# 通常需要调用类型支持类（由 IDL 生成），比如：
-#   ai_train.TrainCmdTypeSupport.register_type(participant, "TrainCmd")
-# 这里我用伪代码，具体取决于你生成的 TypeSupport 名称
+# 通常需要调用类型支持类（由 IDL 生成）
 from RegisterType import register_all_types
 
 register_all_types(participant)  
@@ -27,7 +25,7 @@ topic = participant.create_topic(
     -1, None, 0
 )
 
-# 4. 创建 DataWriter（注意：返回的是 TrainCmdDataWriter 而不是裸 DataWriter）
+# 4. 创建 DataWriter
 # writer = publisher.create_datawriter(topic, -1, None, 0)
 
 mask = StatusKind.DATA_AVAILABLE_STATUS | StatusKind.SUBSCRIPTION_MATCHED_STATUS
